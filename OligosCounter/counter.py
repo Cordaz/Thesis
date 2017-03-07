@@ -47,6 +47,8 @@ def is_palyndrome(kmer, c_kmer):
    for i in range(0,len(kmer)):
       if kmer[i] != c_kmer[-i]:
          palyndrome = False
+      if not palyndrome:
+         break
    
    return palyndrome
 
