@@ -36,11 +36,13 @@ for line in input_file:
    (kmer, count, freq) = line.strip().split("\t")
    if lookup.has_key(kmer):
       (ctrl_count, ctrl_freq) = lookup[kmer]
+      diff = (float(freq) - float(ctrl_freq)) / float(ctrl_freq)
    else:
       (ctrl_count, ctrl_freq) = (0,0)
+      diff = 1
    
    kmer_total += 1
-   diff = (float(freq) - float(ctrl_freq)) / float(freq)
+   
    diff_total += diff
    differential_kmer[kmer] = diff
    
@@ -50,17 +52,17 @@ for line in input_file:
 diff_mean = diff_total / kmer_total
 
 fig, ax = plt.subplots()
-ax.bar(range(len(differential_kmer)), differential_kmer.values(), align='center', color='g')
+ax.bar(range(len(differential_kmer)), differential_kmer.values(), align='center', color='r', edgecolor='r')
 #Mean
-ax.plot((0,len(differential_kmer)), (diff_mean,diff_mean), color='r')
+ax.plot((0,len(differential_kmer)), (diff_mean,diff_mean), color='b')
 ax.axes.get_xaxis().set_visible(False)
 
 fig.savefig(output_file_path + ".pdf", format='pdf')
 
 output_file = open(output_file_path + ".txt", "w")
 
-output_file.write("k-mer\tcount\tfreq\tcontrol count\tcontrol freq\n")
+output_file.write("k-mer\tcount\tfreq\tcontrol count\tcontrol freq\tdifference\n")
 for kmer in sorted(over_represented):
    (count, freq, ctrl_count, ctrl_freq) = over_represented[kmer]
-   output_file.write(str(kmer) + "\t" + str(count) + "\t" + str(freq) + "\t" + str(ctrl_count) + "\t" + str(ctrl_freq) + "\n")
+   output_file.write(str(kmer) + "\t" + str(count) + "\t" + str(freq) + "\t" + str(ctrl_count) + "\t" + str(ctrl_freq) + "\t" + str(differential_kmer[kmer]) + "\n")
 
