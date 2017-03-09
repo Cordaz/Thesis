@@ -52,12 +52,8 @@ def get_chromosome_seq(chrom):
     return seq
 
 
-def check_seq(s):
-    return 'N' not in s
-
-
 def complementary(seq):
-   comp_bases = {'A':'T', 'C':'G', 'G':'C', 'T':'A'}
+   comp_bases = {'A':'T', 'C':'G', 'G':'C', 'T':'A', 'N':'N'}
    c_seq = ""
    for char in reversed(seq):
       c_seq = c_seq + comp_bases[char]
@@ -80,26 +76,15 @@ def extend_read(chrom_index, seq, strand, chrom, pos):
     return "", chrom_index
 
 def extend_pos(chrom_seq, chrom_index):
-    seq = chrom_seq[chrom_index -1 : chrom_index + ext_length - 1]
-    if check_seq(seq):
-        return seq
-    return ""
+    return chrom_seq[chrom_index -1 : chrom_index + ext_length - 1]
 
 def extend_neg(chrom_seq, chrom_index):
     seq = chrom_seq[chrom_index - (ext_length - read_length) - 1 : chrom_index + read_length - 1 - 1]
-    if check_seq(seq):
-        return complementary(seq)
-    return ""
-
-def file_len(fname):
-    with open(fname, "r") as f:
-        for i, l in enumerate(f):
-            pass
-    return i+1
+    return complementary(seq)
 
 
 #Main
-
+reads = {}
 
 args = sys.argv[1:]
 if len(args) < 1:
@@ -108,10 +93,7 @@ if len(args) < 1:
 
 input_file_path = dataset_path + args[0]
 
-input_length = file_len(input_file_path)
-
 with open(input_file_path, "r") as input_file:
-    output_file = open(result_path + to_fasta(input_file_path), "w+")
     line = input_file.readline()
     while line[0] == '@':
         (chrom, length) = get_pair_chr_length(line)
@@ -123,9 +105,8 @@ with open(input_file_path, "r") as input_file:
     chrom_seq = get_chromosome_seq(chrom)
     #Seaarch for read from starting point
     seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
-    progress = 1
     if seq:
-        output_file.write(id_seq + "\n" + seq)
+        reads[id_seq] = seq
 
     #Process rest of file
     for line in input_file:
@@ -137,10 +118,9 @@ with open(input_file_path, "r") as input_file:
 
         seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
         if seq:
-            output_file.write("\n" + id_seq + "\n" + seq)
+            reads[id_seq] = seq
 
-        progress = progress + 1
-        if (float(progress) / input_length) * 100 % 5 == 0:
-            print "*"
-
-    output_file.close()
+output_file = open(result_path + to_fasta(input_file_path), "w+")
+for id_seq in sorted(reads):
+    output_file.write(id_seq + "\n" + reads[id_seq] + "\n")
+output_file.close()
