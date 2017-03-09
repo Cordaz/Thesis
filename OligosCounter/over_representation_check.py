@@ -8,8 +8,14 @@ threshold = 0.5
 
 args = sys.argv[1:]
 if len(args) < 3:
-   print "usage: input_file control_file output_file"
+   print "usage: [--plot] input_file control_file output_file"
    sys.exit(1)
+
+plot = False
+if args[0] == "--plot":
+   plot = True
+   del args[0]
+
 
 input_file_path = args[0]
 del args[0]
@@ -20,6 +26,7 @@ del args[0]
 
 
 control_file = open(control_file_path, "r")
+next(control_file) #skip header
 #Create lookup table
 lookup = {}
 for line in control_file:
@@ -32,14 +39,14 @@ kmer_total = 0
 diff_total = 0.0
 
 input_file = open(input_file_path, "r")
+next(input_file) #skip header
 for line in input_file:
    (kmer, count, freq) = line.strip().split("\t")
-   if lookup.has_key(kmer):
-      (ctrl_count, ctrl_freq) = lookup[kmer]
-      diff = (float(freq) - float(ctrl_freq)) / float(ctrl_freq)
-   else:
-      (ctrl_count, ctrl_freq) = (0,0)
-      diff = 1
+   if not lookup.has_key(kmer): #skip if not present
+      continue
+   
+   (ctrl_count, ctrl_freq) = lookup[kmer]
+   diff = (float(freq) - float(ctrl_freq)) / float(ctrl_freq)
    
    kmer_total += 1
    
@@ -51,13 +58,14 @@ for line in input_file:
 
 diff_mean = diff_total / kmer_total
 
-fig, ax = plt.subplots()
-ax.bar(range(len(differential_kmer)), differential_kmer.values(), align='center', color='r', edgecolor='r')
-#Mean
-ax.plot((0,len(differential_kmer)), (diff_mean,diff_mean), color='b')
-ax.axes.get_xaxis().set_visible(False)
+if plot:
+   fig, ax = plt.subplots()
+   ax.bar(range(len(differential_kmer)), differential_kmer.values(), align='center', color='r', edgecolor='r')
+   #Mean
+   ax.plot((0,len(differential_kmer)), (diff_mean,diff_mean), color='b')
+   ax.axes.get_xaxis().set_visible(False)
 
-fig.savefig(output_file_path + ".pdf", format='pdf')
+   fig.savefig(output_file_path + ".pdf", format='pdf')
 
 output_file = open(output_file_path + ".txt", "w")
 

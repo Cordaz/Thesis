@@ -88,6 +88,7 @@ for read in reads:
             kmer_total += 1
 
 output_file = open(output_file_path, "w")
+output_file.write("k-mer\tcount\tfreq\n")
 for kmer in sorted(kmers_hash):
    output_file.write(str(kmer) + "\t" + str(kmers_hash[kmer]) + "\t" + str(float(kmers_hash[kmer]) / kmer_total) + "\n")
    
