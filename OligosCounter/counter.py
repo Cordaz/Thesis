@@ -14,7 +14,7 @@ def get_reads(f):
    for line in f:
       if i == 4:
          i = 0
-      i += 1
+      i = i + 1
       if i != 2:
          continue
       reads.append(drop_newline(line))
@@ -38,7 +38,7 @@ def complementary_kmer(kmer):
    comp_bases = {'A':'T', 'C':'G', 'G':'C', 'T':'A'}
    c_kmer = ""
    for char in reversed(kmer):
-      c_kmer += comp_bases[char]
+      c_kmer = c_kmer + comp_bases[char]
    
    return c_kmer
 
@@ -75,17 +75,17 @@ for read in reads:
    for kmer in kmers:
       if is_valid_kmer(kmer):
          if kmer in kmers_hash:
-            kmers_hash[kmer] += 1
+            kmers_hash[kmer] = kmers_hash[kmer] + 1
          else:
             kmers_hash[kmer] = 1
-         kmer_total += 1
+         kmer_total = kmer_total + 1
          c_kmer = complementary_kmer(kmer)
          if not is_palyndrome(kmer, c_kmer):
             if c_kmer in kmers_hash:
-               kmers_hash[c_kmer] += 1
+               kmers_hash[c_kmer] = kmers_hash[c_kmer] + 1
             else:
                kmers_hash[c_kmer] = 1
-            kmer_total += 1
+            kmer_total = kmer_total + 1
 
 output_file = open(output_file_path, "w")
 output_file.write("k-mer\tcount\tfreq\n")

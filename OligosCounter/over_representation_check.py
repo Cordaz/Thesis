@@ -48,9 +48,9 @@ for line in input_file:
    (ctrl_count, ctrl_freq) = lookup[kmer]
    diff = (float(freq) - float(ctrl_freq)) / float(ctrl_freq)
    
-   kmer_total += 1
+   kmer_total = kmer_total + 1
    
-   diff_total += diff
+   diff_total = diff_total + diff
    differential_kmer[kmer] = diff
    
    if abs(diff) >= threshold:
