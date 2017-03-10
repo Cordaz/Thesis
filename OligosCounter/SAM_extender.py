@@ -1,11 +1,19 @@
 #!/usr/bin/python
 
+'''
+
+Works with nohup output: please be careful to remove already existent 'nohup.out'.
+
+'''
+
 import sys
+import os
+
+home = os.getenv("HOME")
 
 #Constant
-dataset_path = "../../dataset/"
+dataset_path = home + "/dataset/"
 genome_path = dataset_path + "genome/"
-result_path = dataset_path + "extended/"
 
 pos_strand = 0
 neg_strand = 16
@@ -27,7 +35,7 @@ def to_fasta(path):
     for c in path:
         filename = filename + c
         if c == ".":
-            filename = filename + "fa"
+            filename = filename + "." + str(ext_length) + ".txt"
             break
     return filename
 
@@ -61,30 +69,34 @@ def complementary(seq):
    return c_seq
 
 def extend_read(chrom_index, seq, strand, chrom, pos):
+    chrom_len = int(chrom_length[chrom])
     if strand == not_mapped:
         return "", chrom_index
 
-    while chrom_index < chrom_length[chrom]:
+    while chrom_index < chrom_len:
         if chrom_index == pos:
             break
         chrom_index = chrom_index + 1
 
     if strand == pos_strand:
+        if (chrom_len - chrom_index) <= ext_length:
+            return "", chrom_index
         return extend_pos(seq, chrom_index), chrom_index
     if strand == neg_strand:
+        if (chrom_len - chrom_index) < read_length:
+            return "", chrom_index
         return extend_neg(seq, chrom_index), chrom_index
     return "", chrom_index
 
 def extend_pos(chrom_seq, chrom_index):
-    return chrom_seq[chrom_index -1 : chrom_index + ext_length - 1]
+    return chrom_seq[chrom_index - 1 : chrom_index + ext_length - 1]
 
 def extend_neg(chrom_seq, chrom_index):
-    seq = chrom_seq[chrom_index - (ext_length - read_length) - 1 : chrom_index + read_length - 1 - 1]
+    seq = chrom_seq[chrom_index - (ext_length - read_length) - 1 : chrom_index + read_length - 1]
     return complementary(seq)
 
 
 #Main
-reads = {}
 
 args = sys.argv[1:]
 if len(args) < 1:
@@ -106,7 +118,7 @@ with open(input_file_path, "r") as input_file:
     #Seaarch for read from starting point
     seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
     if seq:
-        reads[id_seq] = seq
+        print ">" + id_seq + "\n" + seq
 
     #Process rest of file
     for line in input_file:
@@ -118,9 +130,11 @@ with open(input_file_path, "r") as input_file:
 
         seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
         if seq:
-            reads[id_seq] = seq
+            print ">" + id_seq + "\n" + seq
 
+'''
 output_file = open(result_path + to_fasta(input_file_path), "w+")
 for id_seq in reads:
     output_file.write(id_seq + "\n" + reads[id_seq] + "\n")
 output_file.close()
+'''
