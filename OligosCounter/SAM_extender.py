@@ -121,6 +121,6 @@ with open(input_file_path, "r") as input_file:
             reads[id_seq] = seq
 
 output_file = open(result_path + to_fasta(input_file_path), "w+")
-for id_seq in sorted(reads):
+for id_seq in reads:
     output_file.write(id_seq + "\n" + reads[id_seq] + "\n")
 output_file.close()
