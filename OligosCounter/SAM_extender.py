@@ -1,26 +1,32 @@
 #!/usr/bin/python
 
-'''
-
-Works with nohup output: please be careful to remove already existent 'nohup.out'.
-
-'''
-
 import sys
 import os
 
 home = os.getenv("HOME")
 
-#Constant
+'''
+
+Works with nohup output: please be careful to remove already existent 'nohup.out'.
+
+input file must be in ~/dataset/
+genome files ('chr_.fa') must be in ~/dataset/genome/
+
+to change:
+'''
 dataset_path = home + "/dataset/"
 genome_path = dataset_path + "genome/"
 
+#Works on 34 long reads
+read_length = 34
+#Extension
+ext_length = 100
+
+
+#Constant
 pos_strand = 0
 neg_strand = 16
 not_mapped = 4
-
-ext_length = 100
-read_length = 34
 
 #Global vars
 chrom_in_use = ""
