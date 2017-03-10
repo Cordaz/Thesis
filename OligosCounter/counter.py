@@ -8,7 +8,7 @@ def drop_newline(s):
    return s[0:len(s)-1]
 
 
-def get_reads(f):
+def get_reads_fq(f):
    reads = []
    i = 0
    for line in f:
@@ -17,6 +17,14 @@ def get_reads(f):
       i = i + 1
       if i != 2:
          continue
+      reads.append(drop_newline(line))
+
+   return reads
+
+def get_reads_fa(f):
+   reads = []
+   for line in f:
+      next(f)
       reads.append(drop_newline(line))
 
    return reads
@@ -54,9 +62,22 @@ def is_palyndrome(kmer, c_kmer):
 
 
 args = sys.argv[1:]
-if not args or len(args) != 2:
-   print "usage: input_file output_file";
+if not args or len(args) != 3:
+   print "usage: [--fasta|--fastq] input_file output_file";
    sys.exit(1)
+
+fasta = False
+fastq = False
+if args[0] == "--fasta":
+    fasta = True
+    del args[0]
+elif args[0] == "--fastq":
+    fastq = True
+    del args[0]
+
+if not (fasta or fastq):
+    print "select input type (--fasta or --fastq)"
+    sys.exit(1)
 
 input_file_path = args[0]
 del args[0]
@@ -67,7 +88,10 @@ kmers_hash = {}
 kmer_total = 0
 
 with open(input_file_path, "r") as input_file:
-    reads = get_reads(input_file)
+    if fasta:
+        reads = get_reads_fa(input_file)
+    elif fastq:
+        reads = get_reads_fq(input_file)
 
     for read in reads:
        kmers = get_kmers(read)
