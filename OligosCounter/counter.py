@@ -23,8 +23,13 @@ def get_reads_fq(f):
 
 def get_reads_fa(f):
    reads = []
+   i = 0
    for line in f:
-      next(f)
+      if i == 2:
+          i = 0
+      i = i + 1
+      if i == 1:
+          continue
       reads.append(drop_newline(line))
 
    return reads
