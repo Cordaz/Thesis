@@ -26,21 +26,15 @@ node_t * add_in_edges(node_t * n, edge_t * e) {
 	prev = NULL;
 	while (cur) {
 		prev = cur;
-		cur = (n->in)->next;
-	}
-
-	if(cur) {
-		//This should be NULL if here, ERROR
-		fprintf(stdout, "ERROR: NULL pointer expected\n");
-		exit(1);
+		cur = cur->next;
 	}
 
 	list_edge_t * new;
 
 	//Build new list entry
-	if( !( new = (list_edge_t *)malloc(sizeof(list_edge_t)) ) ) {
-		fprintf(stdout, "ERROR: couldn't allocate\n");
-		exit(1);
+	new = (list_edge_t *)malloc(sizeof(list_edge_t));
+	if( !new ) {
+		return NULL;
 	}
 	new->e = e;
 	new->next = NULL;
@@ -63,21 +57,15 @@ node_t * add_out_edges(node_t * n, edge_t * e) {
 	prev = NULL;
 	while (cur) {
 		prev = cur;
-		cur = (n->out)->next;
-	}
-
-	if(cur) {
-		//This should be NULL if here, ERROR
-		fprintf(stdout, "ERROR: NULL pointer expected\n");
-		exit(1);
+		cur = cur->next;
 	}
 
 	list_edge_t * new;
 
 	//Build new list entry
-	if( !( new = (list_edge_t *)malloc(sizeof(list_edge_t)) ) ) {
-		fprintf(stdout, "ERROR: couldn't allocate\n");
-		exit(1);
+	new = (list_edge_t *)malloc(sizeof(list_edge_t));
+	if( !new ) {
+		return NULL;
 	}
 	new->e = e;
 	new->next = NULL;

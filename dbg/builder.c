@@ -35,7 +35,7 @@ typedef struct graph_s {
 
 /////////////// PROTOTYPES
 
-void de_bruijn_ize(char *, graph_t *);
+int de_bruijn_ize(char *, graph_t *);
 void extract_kmers(char *, char [][K+1]);
 void extract_subkmers(char *, char [][K+1]);
 
@@ -109,7 +109,11 @@ int main (int argc, char * argv[]) {
 		i++;
 		if (i==2) {
 			strncpy(read, buf, READS_LEN);
-			de_bruijn_ize(read, &dbg);
+			read[READS_LEN] = '\0';
+			printf("%s\n", read);
+			if(de_bruijn_ize(read, &dbg)) {
+				return 1;
+			}
 		}
 		if (i==skip_line) {
 			i=0;
@@ -136,8 +140,8 @@ int main (int argc, char * argv[]) {
 		return 1;
 	}
 	//Printing headers
-	fprintf(nodes_fp, "id(HEX)\tseq\t\n");
-	fprintf(edges_fp, "id(HEX)\tcount\tfrom_node_id\tto_node_id\n");
+	fprintf(nodes_fp, "id\tseq\t\n");
+	fprintf(edges_fp, "id\tcount\tfrom_node_id\tto_node_id\n");
 	for(i=0; i<NODES; i++) {
 		if( dbg.nodes[i] ) {
 			fprintf(nodes_fp, "%d\t%s\n", (dbg.nodes[i])->id, (dbg.nodes[i])->seq);
@@ -163,7 +167,7 @@ int main (int argc, char * argv[]) {
 
 /////////////// FUNCTIONS
 
-void de_bruijn_ize(char * seq, graph_t * graph) {
+int de_bruijn_ize(char * seq, graph_t * graph) {
 	char kmers[READS_LEN-K+1][K+1];
 
 	extract_kmers(seq, kmers);
@@ -181,12 +185,12 @@ void de_bruijn_ize(char * seq, graph_t * graph) {
 		//For each kmer
 		if (!contains(kmers[i], 'N')) {
 			extract_subkmers(kmers[i], subkmers);
-			//printf("%s\t%s\n", subkmers[0], subkmers[1]);
+			printf("\t\t%s\t%s\n", subkmers[0], subkmers[1]);
 			hashed[0] = hash(subkmers[0]);
 			if( !(n0 = graph->nodes[hashed[0]]) ) {
 				if( !(n0 = create_node(hashed[0], subkmers[0])) ) {
 					fprintf(stdout, "ERROR: couldn't allocate memory\n");
-					exit(1);
+					return 1;
 				}
 				graph->nodes[hashed[0]] = n0;
 				printf("added(n0) - ");
@@ -196,23 +200,31 @@ void de_bruijn_ize(char * seq, graph_t * graph) {
 			if( !(n1 = graph->nodes[hashed[1]]) ) {
 				if( !(n1 = create_node(hashed[1], subkmers[1])) ) {
 					fprintf(stdout, "ERROR: couldn't allocate memory\n");
-					exit(1);
+					return 1;
 				}
 				graph->nodes[hashed[1]] = n1;
 				printf("added(n1) - ");
 			}
-			printf("n0: %x - %s\tn1: %x - %s\n", n0->id, n0->seq, n1->id, n1->seq);
+			printf("n0: %d - %s\tn1: %d - %s\n", n0->id, n0->seq, n1->id, n1->seq);
 			edge_id = hash(kmers[i]);
 
 			if (!( e = graph->edges[edge_id] )) {
 				//Create edge
 				if( !(e = create_edge(n0, n1, edge_id) ) ) {
 					fprintf(stdout, "ERROR: couldn't allocate memory\n");
-					exit(1);
+					return 1;
 				}
 				graph->edges[edge_id] = e;
 				n0 = add_out_edges(n0, e);
+				if (!n0) {
+					fprintf(stdout, "ERROR: couldn't allocate\n");
+					return 1;
+				}
 				n1 = add_in_edges(n1, e);
+				if (!n1) {
+					fprintf(stdout, "ERROR: couldn't allocate\n");
+					return 1;
+				}
 				printf("created - ");
 			} else {
 				//Increment count
@@ -222,17 +234,18 @@ void de_bruijn_ize(char * seq, graph_t * graph) {
 		}
 
 	}
+	return 0;
 }
 
 void extract_kmers(char * seq, char kmers[][K+1]) {
 	int i, j;
-	//printf("Extracting kmers from: %s\n", seq);
+	printf("Extracting kmers from: %s\n", seq);
 	for (i=0; i<READS_LEN-K+1; i++) {
 		for(j=0; j<K; j++) {
 			kmers[i][j] = seq[i+j];
 		}
 		kmers[i][j] = '\0';
-		//printf("%s\n", kmers[i]);
+		printf("%s\n", kmers[i]);
 	}
 }
 
@@ -264,7 +277,7 @@ int hash(char * kmer) {
 	int hashed = 0;
 	int i;
 	int v;
-	for(i=K-1; i >= 0; i--) {
+	for(i=0; i < K-1; i++) {
 		switch(kmer[i]) {
 			case 'A':
 				v = 0;
@@ -283,7 +296,9 @@ int hash(char * kmer) {
 		}
 		hashed = hashed << 2;
 		hashed += v;
+		printf("%d\t", hashed);
 	}
+	printf("\n");
 
 	return hashed;
 }
