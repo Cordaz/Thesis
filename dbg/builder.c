@@ -2,24 +2,22 @@
 #include <string.h>
 #include <malloc.h>
 #include <stdlib.h>
+#include <math.h>
 #include "data_structures.h"
 
 #ifdef SILENT
 	#define printf(...)
 #endif
 
-/////////////// PARAMTERS
-#define K 6 //k-mer length (Note: graph built on k-1-mer)
-#define NODES 1024 // = 4^(K-1)
-#define EDGES  4096 // = 4^K
-#define READS_LEN 34
 
 /////////////// DEFINES
-#define MAX_EDGES 4 //Max out degree of node (one per nucleotides)
 #define BUFFER 256 //Input buffer
 #define ARGS 2
 #define IN_FORMAT 1
-#define IN_FILE 2
+#define K_ARG 2
+#define L_ARG 4
+#define IN_FILE 6
+#define ARGS 2 //min args
 #define ARGS_BUF 50
 
 #define FASTA 1
@@ -29,15 +27,21 @@
 /////////////// DATA STRUCTRUES
 
 typedef struct graph_s {
-	node_t * nodes[NODES]; //hash table of nodes
-	edge_t * edges[EDGES]; //hash table of edges
+	node_t ** nodes; //hash table of nodes
+	edge_t ** edges; //hash table of edges
 } graph_t;
+
+/////////////// GLOBAL
+int k = 6;
+int l = 34;
+char ** kmers;
+char * subkmers[2];
 
 /////////////// PROTOTYPES
 
 int de_bruijn_ize(char *, graph_t *);
-void extract_kmers(char *, char [][K+1]);
-void extract_subkmers(char *, char [][K+1]);
+void extract_kmers(char *);
+void extract_subkmers();
 
 int contains(char *, char);
 int hash(char *);
@@ -46,15 +50,28 @@ int hash(char *);
 int main (int argc, char * argv[]) {
 	//// Check args
 	int input_format = 0;
+	int l_arg = L_ARG;
+	int in_file = IN_FILE;
 	char input_file[ARGS_BUF+7]; //plus extension
 	char nodes_file[ARGS_BUF+7];
 	char edges_file[ARGS_BUF+7];
 	argc -= 1;
-	if (argc < 2) {
-		fprintf(stdout, "Usage: (--fasta|--fastq) input_file_no_ext\n");
+	if (argc < ARGS) {
+		fprintf(stdout, "Usage: (--fasta|--fastq) [-k K (default 6)] [-l reads_len (default 34)] input_file_no_ext\n");
 		return 1;
 	} else {
-		strncpy(input_file, argv[IN_FILE], ARGS_BUF);
+		if ( strcmp(argv[K_ARG], "-k") == 0 ) {
+			k = atoi(argv[K_ARG + 1]);
+		} else {
+			in_file -= 2;
+			l_arg -= 2;
+		}
+		if ( strcmp(argv[l_arg], "-l") == 0 ){
+			l = atoi(argv[l_arg + 1]);
+		} else {
+			in_file -= 2;
+		}
+		strncpy(input_file, argv[in_file], ARGS_BUF);
 		strcpy(nodes_file, input_file);
 		strcat(nodes_file, ".nodes");
 		strcpy(edges_file, input_file);
@@ -66,7 +83,7 @@ int main (int argc, char * argv[]) {
 			input_format = FASTQ;
 			strcat(input_file, ".fastq");
 		} else {
-			fprintf(stdout, "Usage: (--fasta|--fastq) input_file_no_ext\n");
+			fprintf(stdout, "Usage: (--fasta|--fastq) [-k K (default 34)] input_file_no_ext\n");
 			return 1;
 		}
 	}
@@ -77,14 +94,47 @@ int main (int argc, char * argv[]) {
 	FILE * in_fp;
 	int i;
 
-	char read[READS_LEN+1];
+	char * read;
+	if ( !(read = (char*)malloc(sizeof(char) * (l+1))) ) {
+		fprintf(stdout, "ERROR: couldn't allocate memory\n");
+		return 1;
+	}
+
+	if ( !(kmers = (char**)malloc(sizeof(char*) * (l-k+1) )) ) {
+		fprintf(stdout, "ERROR: couldn't allocate memory\n");
+		return 1;
+	}
+	for (i=0; i<(l-k+1); i++) {
+		if ( !(kmers[i] = (char*)malloc(sizeof(char) * (k+1) )) ) {
+			fprintf(stdout, "ERROR: couldn't allocate memory\n");
+			return 1;
+		}
+	}
+
+	for(i=0; i<2; i++) {
+		if( !(subkmers[i] = (char*)malloc(sizeof(char) * k)) ) {
+			fprintf(stdout, "ERROR: couldn't allocate memory\n");
+			return 1;
+		}
+	}
+
+	double nodes = pow((double)4, (double)(k-1));
+	double edges = pow((double)4, (double)k);
 
 	graph_t dbg;
-	for (i=0; i<NODES; i++) {
+	if ( !(dbg.nodes = (node_t**)malloc(sizeof(node_t*) * nodes)) ) {
+		fprintf(stdout, "ERROR: couldn't allocate memory\n");
+		return 1;
+	}
+	if ( !(dbg.edges = (edge_t**)malloc(sizeof(edge_t*) * edges)) ) {
+		fprintf(stdout, "ERROR: couldn't allocate memory\n");
+		return 1;
+	}
+	for (i=0; i<nodes; i++) {
 		dbg.nodes[i] = NULL;
 		dbg.edges[i] = NULL;
 	}
-	for( ; i<EDGES; i++) {
+	for( ; i<edges; i++) {
 		dbg.edges[i] = NULL;
 	}
 
@@ -108,8 +158,8 @@ int main (int argc, char * argv[]) {
 	while(!feof(in_fp)) {
 		i++;
 		if (i==2) {
-			strncpy(read, buf, READS_LEN);
-			read[READS_LEN] = '\0';
+			strncpy(read, buf, l);
+			read[l] = '\0';
 			printf("%s\n", read);
 			if(de_bruijn_ize(read, &dbg)) {
 				return 1;
@@ -124,7 +174,7 @@ int main (int argc, char * argv[]) {
 
 	fclose(in_fp);
 
-	fprintf(stdout, "Generating output files\n");
+	fprintf(stdout, "Generating output files for %s\n", input_file);
 	//// Graph computed, proceed to output
 	FILE * nodes_fp;
 	FILE * edges_fp;
@@ -142,7 +192,7 @@ int main (int argc, char * argv[]) {
 	//Printing headers
 	fprintf(nodes_fp, "id\tseq\t\n");
 	fprintf(edges_fp, "id\tcount\tfrom_node_id\tto_node_id\n");
-	for(i=0; i<NODES; i++) {
+	for(i=0; i<nodes; i++) {
 		if( dbg.nodes[i] ) {
 			fprintf(nodes_fp, "%d\t%s\n", (dbg.nodes[i])->id, (dbg.nodes[i])->seq);
 		}
@@ -152,7 +202,7 @@ int main (int argc, char * argv[]) {
 	}
 	fclose(nodes_fp);
 	printf("Remaining edges\n");
-	for(i=NODES ; i<EDGES; i++) {
+	for(i=nodes ; i<edges; i++) {
 		if( dbg.edges[i] ) {
 			fprintf(edges_fp, "%d\t%d\t%d\t%d\n",  (dbg.edges[i])->id, (dbg.edges[i])->count, ((dbg.edges[i])->from)->id, ((dbg.edges[i])->to)->id);
 		}
@@ -168,12 +218,11 @@ int main (int argc, char * argv[]) {
 /////////////// FUNCTIONS
 
 int de_bruijn_ize(char * seq, graph_t * graph) {
-	char kmers[READS_LEN-K+1][K+1];
 
-	extract_kmers(seq, kmers);
+	extract_kmers(seq);
 
 	int i;
-	char subkmers[2][K+1];
+
 	int hashed[2];
 	int edge_id;
 
@@ -181,14 +230,18 @@ int de_bruijn_ize(char * seq, graph_t * graph) {
 	node_t * n1;
 	edge_t * e;
 
-	for (i=0; i<READS_LEN-K+1; i++) {
+	for (i=0; i<l-k+1; i++) {
 		//For each kmer
 		if (!contains(kmers[i], 'N')) {
-			extract_subkmers(kmers[i], subkmers);
+			extract_subkmers(kmers[i]);
 			printf("\t\t%s\t%s\n", subkmers[0], subkmers[1]);
 			hashed[0] = hash(subkmers[0]);
 			if( !(n0 = graph->nodes[hashed[0]]) ) {
 				if( !(n0 = create_node(hashed[0], subkmers[0])) ) {
+					fprintf(stdout, "ERROR: couldn't allocate memory\n");
+					return 1;
+				}
+				if ( !(graph->nodes[hashed[0]] = (node_t*)malloc(sizeof(node_t))) ) {
 					fprintf(stdout, "ERROR: couldn't allocate memory\n");
 					return 1;
 				}
@@ -202,6 +255,10 @@ int de_bruijn_ize(char * seq, graph_t * graph) {
 					fprintf(stdout, "ERROR: couldn't allocate memory\n");
 					return 1;
 				}
+				if ( !(graph->nodes[hashed[1]] = (node_t*)malloc(sizeof(node_t))) ) {
+					fprintf(stdout, "ERROR: couldn't allocate memory\n");
+					return 1;
+				}
 				graph->nodes[hashed[1]] = n1;
 				printf("added(n1) - ");
 			}
@@ -211,6 +268,10 @@ int de_bruijn_ize(char * seq, graph_t * graph) {
 			if (!( e = graph->edges[edge_id] )) {
 				//Create edge
 				if( !(e = create_edge(n0, n1, edge_id) ) ) {
+					fprintf(stdout, "ERROR: couldn't allocate memory\n");
+					return 1;
+				}
+				if ( !(graph->edges[edge_id] = (edge_t*)malloc(sizeof(edge_t))) ) {
 					fprintf(stdout, "ERROR: couldn't allocate memory\n");
 					return 1;
 				}
@@ -230,18 +291,18 @@ int de_bruijn_ize(char * seq, graph_t * graph) {
 				//Increment count
 				e->count = (e->count) + 1;
 			}
-			printf("edge: %x\tcount: %d\n", e->id, e->count);
+			printf("edge: %d\tcount: %d\n", e->id, e->count);
 		}
 
 	}
 	return 0;
 }
 
-void extract_kmers(char * seq, char kmers[][K+1]) {
+void extract_kmers(char * seq) {
 	int i, j;
 	printf("Extracting kmers from: %s\n", seq);
-	for (i=0; i<READS_LEN-K+1; i++) {
-		for(j=0; j<K; j++) {
+	for (i=0; i<l-k+1; i++) {
+		for(j=0; j<k; j++) {
 			kmers[i][j] = seq[i+j];
 		}
 		kmers[i][j] = '\0';
@@ -249,23 +310,23 @@ void extract_kmers(char * seq, char kmers[][K+1]) {
 	}
 }
 
-void extract_subkmers(char * kmer, char subkmers[][K+1]) {
+void extract_subkmers(char * kmer) {
 	int i;
 	subkmers[0][0] = kmer[0];
-	for(i=1; i<K; i++) {
+	for(i=1; i<k; i++) {
 		subkmers[0][i] = kmer[i];
 		subkmers[1][i-1] = kmer[i];
 	}
-	subkmers[1][i] = kmer[i];
+	subkmers[1][i-1] = kmer[i];
 
-	subkmers[0][K-1] = '\0';
-	subkmers[1][K] = '\0';
+	subkmers[0][k-1] = '\0';
+	subkmers[1][k-1] = '\0';
 }
 
 
 int contains(char * seq, char c) {
-	int i;
-	for(i=0; i<K+1; i++) {
+	unsigned int i;
+	for(i=0; i<strlen(seq); i++) {
 		if(seq[i] == c) {
 			return 1;
 		}
@@ -275,9 +336,9 @@ int contains(char * seq, char c) {
 
 int hash(char * kmer) {
 	int hashed = 0;
-	int i;
+	unsigned int i;
 	int v;
-	for(i=0; i < K-1; i++) {
+	for(i=0; i < strlen(kmer); i++) {
 		switch(kmer[i]) {
 			case 'A':
 				v = 0;
@@ -296,9 +357,7 @@ int hash(char * kmer) {
 		}
 		hashed = hashed << 2;
 		hashed += v;
-		printf("%d\t", hashed);
 	}
-	printf("\n");
 
 	return hashed;
 }
