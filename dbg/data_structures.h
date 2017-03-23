@@ -1,8 +1,6 @@
 #ifndef DATA_STRUCTURES_H
 	#define DATA_STRUCTURES_H
 
-	#define K 6
-
 	//// PROTOTYPES
 	struct node_s;
 	struct edge_s;
@@ -16,7 +14,7 @@
 
 	typedef struct node_s {
 		int id;
-		char seq[K];
+		char * seq;
 		list_edge_t * in;
 		list_edge_t * out;
 	} node_t;

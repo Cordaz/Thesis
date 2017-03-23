@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "data_structures.h"
+#include "../utilities/my_lib.h"
 
 #ifdef SILENT
 	#define printf(...)
@@ -43,9 +44,6 @@ char * subkmers[2];
 int de_bruijn_ize(char *, graph_t *);
 void extract_kmers(char *);
 void extract_subkmers();
-
-int contains(char *, char);
-int hash(char *);
 
 /////////////// MAIN
 int main (int argc, char * argv[]) {
@@ -236,7 +234,7 @@ int de_bruijn_ize(char * seq, graph_t * graph) {
 		//For each kmer
 		if (!contains(kmers[i], 'N')) {
 			extract_subkmers(kmers[i]);
-			edge_id = hash(kmers[i]);
+			edge_id = hash(kmers[i], k);
 			printf("\t\t%s\t%s\n", subkmers[0], subkmers[1]);
 			hashed[0] = edge_id >> 2;
 			if( !(n0 = graph->nodes[hashed[0]]) ) {
@@ -323,43 +321,4 @@ void extract_subkmers(char * kmer) {
 
 	subkmers[0][k-1] = '\0';
 	subkmers[1][k-1] = '\0';
-}
-
-
-int contains(char * seq, char c) {
-	unsigned int i;
-	for(i=0; i<strlen(seq); i++) {
-		if(seq[i] == c) {
-			return 1;
-		}
-	}
-	return 0;
-}
-
-int hash(char * kmer) {
-	int hashed = 0;
-	unsigned int i;
-	int v;
-	for(i=0; i < k; i++) {
-		switch(kmer[i]) {
-			case 'A':
-				v = 0;
-				break;
-			case 'C':
-				v = 1;
-				break;
-			case 'G':
-				v = 2;
-				break;
-			case 'T':
-				v = 3;
-				break;
-			default:
-				v = 0;
-		}
-		hashed = hashed << 2;
-		hashed += v;
-	}
-
-	return hashed;
 }

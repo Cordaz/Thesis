@@ -9,12 +9,19 @@
 node_t * create_node(int hashed, char * seq) {
 	node_t * new;
 
-	if( (new = (node_t *) malloc(sizeof(node_t)) ) ) {
-		new->id = hashed;
-		strcpy(new->seq, seq);
-		new->in = NULL;
-		new->out = NULL;
+	if( !(new = (node_t *) malloc(sizeof(node_t)) ) ) {
+		fprintf(stdout, "ERROR: couldn't allocate memory\n");
+		return NULL;
 	}
+
+	new->id = hashed;
+	if ( !(new->seq = (char*)malloc(sizeof(char) * strlen(seq))) ) {
+		fprintf(stdout, "ERROR: couldn't allocate memory\n");
+		return NULL;
+	}
+	strcpy(new->seq, seq);
+	new->in = NULL;
+	new->out = NULL;
 
 	return new;
 }
