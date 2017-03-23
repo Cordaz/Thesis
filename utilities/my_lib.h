@@ -17,4 +17,12 @@
 	 */
 	int contains(char *, char);
 
+	/*
+	 * Calculates the reverse complement of the prompted kmer and put the result in
+	 * the second argument.
+	 * The integer arg specify the dimension.
+	 *
+	 */
+	void reverse_kmer(char *, char *, int);
+
 #endif

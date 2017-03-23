@@ -28,6 +28,7 @@ int hash(char * kmer, int len) {
 	return hashed;
 }
 
+
 int contains(char * seq, char c) {
 	unsigned int i;
 	for(i=0; i<strlen(seq); i++) {
@@ -36,4 +37,29 @@ int contains(char * seq, char c) {
 		}
 	}
 	return 0;
+}
+
+
+void reverse_kmer(char * kmer, char * rev, int k) {
+	int i;
+	char c;
+	for (i=0; i<k; i++) {
+		switch(kmer[i]) {
+			case 'A':
+				c = 'T';
+				break;
+			case 'C':
+				c = 'G';
+				break;
+			case 'G':
+				c = 'C';
+				break;
+			case 'T':
+				c = 'A';
+				break;
+			default:
+				c = '\0'; //Used to eventually return error further in the processing, should not happen
+		}
+		rev[k-1-i] = c;
+	}
 }
