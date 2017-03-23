@@ -34,6 +34,7 @@ typedef struct graph_s {
 /////////////// GLOBAL
 int k = 6;
 int l = 34;
+int mask_hash;
 char ** kmers;
 char * subkmers[2];
 
@@ -120,6 +121,7 @@ int main (int argc, char * argv[]) {
 
 	double nodes = pow((double)4, (double)(k-1));
 	double edges = pow((double)4, (double)k);
+	mask_hash = (int)nodes - 1;
 
 	graph_t dbg;
 	if ( !(dbg.nodes = (node_t**)malloc(sizeof(node_t*) * nodes)) ) {
@@ -234,8 +236,9 @@ int de_bruijn_ize(char * seq, graph_t * graph) {
 		//For each kmer
 		if (!contains(kmers[i], 'N')) {
 			extract_subkmers(kmers[i]);
+			edge_id = hash(kmers[i]);
 			printf("\t\t%s\t%s\n", subkmers[0], subkmers[1]);
-			hashed[0] = hash(subkmers[0]);
+			hashed[0] = edge_id >> 2;
 			if( !(n0 = graph->nodes[hashed[0]]) ) {
 				if( !(n0 = create_node(hashed[0], subkmers[0])) ) {
 					fprintf(stdout, "ERROR: couldn't allocate memory\n");
@@ -249,7 +252,7 @@ int de_bruijn_ize(char * seq, graph_t * graph) {
 				printf("added(n0) - ");
 			}
 
-			hashed[1] = hash(subkmers[1]);
+			hashed[1] = edge_id & mask_hash;
 			if( !(n1 = graph->nodes[hashed[1]]) ) {
 				if( !(n1 = create_node(hashed[1], subkmers[1])) ) {
 					fprintf(stdout, "ERROR: couldn't allocate memory\n");
@@ -263,7 +266,6 @@ int de_bruijn_ize(char * seq, graph_t * graph) {
 				printf("added(n1) - ");
 			}
 			printf("n0: %d - %s\tn1: %d - %s\n", n0->id, n0->seq, n1->id, n1->seq);
-			edge_id = hash(kmers[i]);
 
 			if (!( e = graph->edges[edge_id] )) {
 				//Create edge
@@ -338,7 +340,7 @@ int hash(char * kmer) {
 	int hashed = 0;
 	unsigned int i;
 	int v;
-	for(i=0; i < strlen(kmer); i++) {
+	for(i=0; i < k; i++) {
 		switch(kmer[i]) {
 			case 'A':
 				v = 0;
