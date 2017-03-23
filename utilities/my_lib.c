@@ -44,7 +44,7 @@ void reverse_kmer(char * kmer, char * rev, int k) {
 	int i;
 	char c;
 	for (i=0; i<k; i++) {
-		switch(kmer[i]) {
+		switch(kmer[k-1-i]) {
 			case 'A':
 				c = 'T';
 				break;
@@ -58,8 +58,19 @@ void reverse_kmer(char * kmer, char * rev, int k) {
 				c = 'A';
 				break;
 			default:
-				c = '\0'; //Used to eventually return error further in the processing, should not happen
+				c = '\0'; //Used to eventually return error further in the processing, should not happen (otherwise it will be shorter)
 		}
-		rev[k-1-i] = c;
+		rev[i] = c;
 	}
+	rev[i] = '\0';
+}
+
+
+int is_palyndrome(char * kmer, char * rev, int k) {
+	int i;
+	for (i=0; i<k; i++) {
+		if ( kmer[i] != rev[k-1-i] )
+			return 0;
+	}
+	return 1;
 }

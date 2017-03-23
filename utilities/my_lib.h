@@ -25,4 +25,10 @@
 	 */
 	void reverse_kmer(char *, char *, int);
 
+	/*
+	 * Returns 1 if the kmer and the complementary reverse are equal (i.e. it's palyndrome), 0 otherwise
+	 *
+	 */
+	int is_palyndrome(char *, char *, int);
+
 #endif
