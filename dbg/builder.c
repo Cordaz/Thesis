@@ -24,14 +24,6 @@
 #define FASTA 1
 #define FASTQ 2
 
-
-/////////////// DATA STRUCTRUES
-
-typedef struct graph_s {
-	node_t ** nodes; //hash table of nodes
-	edge_t ** edges; //hash table of edges
-} graph_t;
-
 /////////////// GLOBAL
 int k = 6;
 int l = 34;

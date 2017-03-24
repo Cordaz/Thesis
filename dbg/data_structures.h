@@ -26,6 +26,11 @@
 		node_t * to;
 	} edge_t;
 
+	typedef struct graph_s {
+		node_t ** nodes; //hash table of nodes
+		edge_t ** edges; //hash table of edges
+	} graph_t;
+
 	//// FUNCTIONS PROTOTYPES
 	/*
 	 * Creates (and allocates) a new node containing:
