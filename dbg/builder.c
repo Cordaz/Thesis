@@ -183,20 +183,20 @@ int main (int argc, char * argv[]) {
 	}
 	//Printing headers
 	fprintf(nodes_fp, "id\tseq\t\n");
-	fprintf(edges_fp, "id\tcount\tfrom_node_id\tfrom_node_seq\tto_node_id\tto_node_seq\n");
+	fprintf(edges_fp, "id\tcount\tfrom_node_id\tto_node_id\n");
 	for(i=0; i<nodes; i++) {
 		if( dbg.nodes[i] ) {
 			fprintf(nodes_fp, "%d\t%s\n", (dbg.nodes[i])->id, (dbg.nodes[i])->seq);
 		}
 		if( dbg.edges[i] ) {
-			fprintf(edges_fp, "%d\t%d\t%d\t%s\t%d\t%s\n",  (dbg.edges[i])->id, (dbg.edges[i])->count, ((dbg.edges[i])->from)->id, ((dbg.edges[i])->from)->seq, ((dbg.edges[i])->to)->id, ((dbg.edges[i])->to)->seq);
+			fprintf(edges_fp, "%d\t%d\t%d\t%d\n",  (dbg.edges[i])->id, (dbg.edges[i])->count, ((dbg.edges[i])->from)->id, ((dbg.edges[i])->to)->id);
 		}
 	}
 	fclose(nodes_fp);
 	printf("Remaining edges\n");
 	for(i=nodes ; i<edges; i++) {
 		if( dbg.edges[i] ) {
-			fprintf(edges_fp, "%d\t%d\t%d\t%s\t%d\t%s\n",  (dbg.edges[i])->id, (dbg.edges[i])->count, ((dbg.edges[i])->from)->id, ((dbg.edges[i])->from)->seq, ((dbg.edges[i])->to)->id, ((dbg.edges[i])->to)->seq);
+			fprintf(edges_fp, "%d\t%d\t%d\t%d\n",  (dbg.edges[i])->id, (dbg.edges[i])->count, ((dbg.edges[i])->from)->id, ((dbg.edges[i])->to)->id);
 		}
 	}
 	fclose(edges_fp);
