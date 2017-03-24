@@ -56,14 +56,7 @@ def complementary_kmer(kmer):
    return c_kmer
 
 def is_palyndrome(kmer, c_kmer):
-   palyndrome = True
-   for i in range(0,len(kmer)):
-      if kmer[i] != c_kmer[-i]:
-         palyndrome = False
-      if not palyndrome:
-         break
-
-   return palyndrome
+   return kmer == c_kmer
 
 
 args = sys.argv[1:]

@@ -66,11 +66,6 @@ void reverse_kmer(char * kmer, char * rev, int k) {
 }
 
 
-int is_palyndrome(char * kmer, char * rev, int k) {
-	int i;
-	for (i=0; i<k; i++) {
-		if ( kmer[i] != rev[k-1-i] )
-			return 0;
-	}
-	return 1;
+int is_palyndrome(char * kmer, char * rev) {
+	return !strcmp(kmer, rev);
 }
