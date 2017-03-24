@@ -2,8 +2,9 @@
 	#define DBG_READER_H
 
 	#include <stdio.h>
-	#include <stdlib.h>
 	#include <string.h>
+	#include <malloc.h>
+	#include <stdlib.h>
 	#include <math.h>
 	#include "../data_structures.h"
 

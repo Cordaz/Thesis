@@ -1,5 +1,19 @@
+#include <stdio.h>
+#include <string.h>
+#include <malloc.h>
+#include <stdlib.h>
+#include <math.h>
+#include "../data_structures.h"
+
 graph_t * alloc_graph(double nodes, double edges) {
 	graph_t * dbg;
+	int i;
+
+	if ( !(dbg = (graph_t*)malloc(sizeof(graph_t))) ) {
+		fprintf(stdout, "ERROR: couldn't allocate memory\n");
+		return NULL;
+	}
+
 	if ( !(dbg->nodes = (node_t**)malloc(sizeof(node_t*) * nodes)) ) {
 		fprintf(stdout, "ERROR: couldn't allocate memory\n");
 		return NULL;
@@ -15,13 +29,15 @@ graph_t * alloc_graph(double nodes, double edges) {
 	for( ; i<edges; i++) {
 		dbg->edges[i] = NULL;
 	}
+
+	return dbg;
 }
 
 
 graph_t * load_nodes(graph_t * dbg, char * path) {
 	FILE * fp;
 	char buf[64]; //Reading buffer
-	char args[32]; //Args buffer
+	char * args; //Args buffer
 	node_t * n;
 
 	if ( !(fp = fopen(path, "r")) ) {
@@ -35,8 +51,8 @@ graph_t * load_nodes(graph_t * dbg, char * path) {
 	//Actually read the first line
 	int l; //Store length
 	while(!feof(fp)) {
-		l =  = strlen(buf);
-		buf[l-1] = '\0' //remove \n
+		l =  strlen(buf);
+		buf[l-1] = '\0'; //remove \n
 		if( !(n = (node_t *)malloc(sizeof(node_t))) ) {
 			fprintf(stdout, "ERROR: couldn't allocate memory\n");
 			return NULL;
@@ -45,7 +61,7 @@ graph_t * load_nodes(graph_t * dbg, char * path) {
 		if(args = strtok(buf, "\t"))
 			n->id = atoi(args);
 		if(args = strtok(NULL, "\t"))
-			n->seq = args;
+			strcpy(n->seq, args);
 
 		dbg->nodes[n->id] = n;
 
@@ -59,7 +75,7 @@ graph_t * load_nodes(graph_t * dbg, char * path) {
 graph_t * load_edges(graph_t * dbg, char * path) {
 	FILE * fp;
 	char buf[64]; //Reading buffer
-	char args[32]; //Args buffer
+	char * args; //Args buffer
 	edge_t * e;
 
 	if ( !(fp = fopen(path, "r")) ) {
@@ -73,8 +89,8 @@ graph_t * load_edges(graph_t * dbg, char * path) {
 	//Actually read the first line
 	int l; //Store length
 	while(!feof(fp)) {
-		l =  = strlen(buf);
-		buf[l-1] = '\0' //remove \n
+		l =  strlen(buf);
+		buf[l-1] = '\0'; //remove \n
 		if( !(e = (edge_t *)malloc(sizeof(edge_t))) ) {
 			fprintf(stdout, "ERROR: couldn't allocate memory\n");
 			return NULL;
@@ -85,9 +101,9 @@ graph_t * load_edges(graph_t * dbg, char * path) {
 		if(args = strtok(NULL, "\t"))
 			e->count = atoi(args);
 		if(args = strtok(NULL, "\t"))
-			e->from = args;
+			e->from = dbg->nodes[atoi(args)];
 		if(args = strtok(NULL, "\t"))
-			e->to = args;
+			e->to = dbg->nodes[atoi(args)];
 
 		dbg->edges[e->id] = e;
 
