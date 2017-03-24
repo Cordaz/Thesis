@@ -1,4 +1,5 @@
 #include <string.h>
+#include <math.h>
 
 int hash(char * kmer, int len) {
 	int hashed = 0;
@@ -28,6 +29,37 @@ int hash(char * kmer, int len) {
 	return hashed;
 }
 
+
+void rev_hash(int hash, int k, char * str) {
+	int i;
+	int mask;
+	int c;
+	mask = 3; //Get last 2 bit
+
+	for (i=0; i<k; i++) {
+		c = hash & mask;
+		switch(c) {
+			case 0:
+				c = 'A';
+				break;
+			case 1:
+				c = 'C';
+				break;
+			case 2:
+				c = 'G';
+				break;
+			case 3:
+				c = 'T';
+				break;
+			default:
+				c = 'N';
+		}
+		str[i] = c;
+		hash = hash >> 2;
+	}
+	str[i] = '\0';
+
+}
 
 int contains(char * seq, char c) {
 	unsigned int i;

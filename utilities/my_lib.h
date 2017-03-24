@@ -12,6 +12,16 @@
 	int hash(char *, int);
 
 	/*
+	 * Reverse hash the integer value to a string of length K (second arg)
+	 * 0 (00) -> A
+	 * 1 (01) -> C
+	 * 2 (10) -> G
+	 * 3 (11) -> T
+	 *
+	 */
+	void rev_hash(int, int, char *);
+
+	/*
 	 * Returns 1 if the string contains the provided char, 0 otherwise
 	 *
 	 */
