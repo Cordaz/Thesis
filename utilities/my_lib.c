@@ -54,7 +54,7 @@ void rev_hash(int hash, int k, char * str) {
 			default:
 				c = 'N';
 		}
-		str[i] = c;
+		str[k-1-i] = c;
 		hash = hash >> 2;
 	}
 	str[i] = '\0';
