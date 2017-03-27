@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include <math.h>
 
 int hash(char * kmer, int len) {
@@ -100,4 +101,26 @@ void reverse_kmer(char * kmer, char * rev, int k) {
 
 int is_palyndrome(char * kmer, char * rev) {
 	return !strcmp(kmer, rev);
+}
+
+
+int get_next_substring(char * seq, int index, int min_l, int * len) {
+	int i;
+	if(*(seq+index) == '\0')
+		return -1;
+	//Find a possible start
+	i=index;
+	while(*(seq+i) == 'N') {
+		i++;
+	}
+	//Can start a new substring
+	int j = 0;
+	while(seq[i+j] != 'N' && seq[i + j] != '\0') {
+		j++;
+	}
+	if (j >= min_l) {
+		*len = j;
+		return i;
+	}
+	return get_next_substring(seq, i+j, min_l, len);
 }

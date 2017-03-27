@@ -41,4 +41,10 @@
 	 */
 	int is_palyndrome(char *, char *);
 
+	/*
+	 *
+	 *
+	 */
+	int get_next_substring(char *, int, int, int *);
+
 #endif

@@ -17,6 +17,8 @@
 		char * seq;
 		list_edge_t * in;
 		list_edge_t * out;
+		list_edge_t * in_kstep;
+		list_edge_t * out_kstep;
 	} node_t;
 
 	typedef struct edge_s {
@@ -54,6 +56,25 @@
 	 *
 	 */
 	 node_t * add_out_edges(node_t *, edge_t *);
+
+	 /*
+	  * Add edge to in-list.
+	  *
+	  */
+	 node_t * add_in_kstep_edges(node_t *, edge_t *);
+
+	 /*
+	  * Add edge to out-list.
+	  *
+	  */
+	  node_t * add_out_kstep_edges(node_t *, edge_t *);
+
+	 /*
+	  *
+	  *
+	  */
+	  edge_t * exist_edge(node_t *, edge_t *, char *);
+	  int update_edge(edge_t *);
 
 	 /*
 	  * Creates (and allocates) a new edge between two nodes
