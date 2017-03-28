@@ -208,9 +208,12 @@ int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 		if( !(e = create_edge(n0, n, hash(read+i, k))) ) {
 			return 1;
 		}
-		if (update_edge(e)) {
+		int flag = update_edge(e);
+		if (flag == 1) {
 			fprintf(stdout, "ERROR: couldn't allocate\n");
 			return 1;
+		} else if (flag == -1) {
+			free(e);
 		}
 
 		q = enqueue(q, n);

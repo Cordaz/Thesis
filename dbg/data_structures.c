@@ -170,6 +170,11 @@ int update_edge(edge_t * e) {
 			return 1;
 		}
 	}
+
+	if(t1 && t2) {
+		return -1; //Flag: can free memory
+	}
+
 	return 0;
 }
 
