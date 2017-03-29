@@ -1,7 +1,7 @@
 #ifndef FIFO_H
 	#define FIFO_H
 
-	#include "../dbg/data_structures.h"
+	#include "../adjDBG/data_structures.h"
 
 	typedef struct elem_s {
 		node_t * n;
