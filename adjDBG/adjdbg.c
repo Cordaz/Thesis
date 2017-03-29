@@ -3,6 +3,7 @@
 #include <malloc.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include "data_structures.h"
 #include "../utilities/my_lib.h"
 #include "../utilities/FIFO.h"
@@ -42,6 +43,13 @@ int created_edges;
 
 
 int main (int argc, char * argv[]) {
+	//// TIME INFO
+	time_t rawtime;
+	struct tm * timeinfo;
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] Starting\n", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+
 	int k = K;
 	int l = L;
 	int o = 0;
@@ -109,7 +117,7 @@ int main (int argc, char * argv[]) {
 	int sublen;
 	char buf[BUFFER+1];
 	char * read;
-	if( !(read = (char*)malloc(sizeof(char) * l+1)) ) {
+	if( !(read = (char*)malloc(sizeof(char) * (l+1))) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 		return 1;
 	}
@@ -122,9 +130,12 @@ int main (int argc, char * argv[]) {
 		fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 		return 1;
 	}
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Empty De Bruijn graph built\n");
-	fprintf(stdout, "\tcreated %d nodes\n", (int)nodes);
-	fprintf(stdout, "\tcreated %d 1-step edges\n", (int)edges);
+	fprintf(stdout, "\t\tcreated %d nodes\n", (int)nodes);
+	fprintf(stdout, "\t\tcreated %d 1-step edges\n", (int)edges);
 
 	//// INIT QUEUE
 	fifo_t * q;
@@ -134,6 +145,9 @@ int main (int argc, char * argv[]) {
 	}
 
 	//// OPENING READS FILE
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Reading %s\n", input_file);
 	FILE * fp;
 	if( !(fp = fopen(input_file, "r")) ) {
@@ -157,6 +171,7 @@ int main (int argc, char * argv[]) {
 		if(i==2) {
 			//This line has the read
 			strncpy(read, buf, l); //Remove '\n', ensure length
+			read[l] = '\0';
 			//printf("%s\n", read);
 			index = 0;
 			while( (index = get_next_substring(read, index, k, &sublen)) != -1 ) {
@@ -178,12 +193,18 @@ int main (int argc, char * argv[]) {
 	fclose(fp);
 
 	//// OUTPUT STATISTICS
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Processing of ChIP-seq complete:\n");
-	fprintf(stdout, "\tcreated %d %d-step edges", created_edges, k/2);
+	fprintf(stdout, "\t\tcreated %d %d-step edges", created_edges, k/2);
 	fprintf(stdout, "[out of 4^%d (%d) maximum]\n\n", k, (int)pow((double)4, k));
 
 	int old_created_edges = created_edges;
 	//// MAPPING CONTROL FILE
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Reading %s\n", control_file);
 
 	if( !(fp = fopen(control_file, "r")) ) {
@@ -198,6 +219,7 @@ int main (int argc, char * argv[]) {
 		if(i==2) {
 			//This line has the read
 			strncpy(read, buf, l); //Remove '\n', ensure length
+			read[l] = '\0';
 			//printf("%s\n", read);
 			index = 0;
 			while( (index = get_next_substring(read, index, k, &sublen)) != -1 ) {
@@ -219,13 +241,19 @@ int main (int argc, char * argv[]) {
 	fclose(fp);
 
 	//// OUTPUT STATISTICS
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Processing of Input complete:\n");
-	fprintf(stdout, "\tcreated new %d %d-step edges\n", (created_edges - old_created_edges), k/2);
+	fprintf(stdout, "\t\tcreated new %d %d-step edges\n", (created_edges - old_created_edges), k/2);
 
 
 	if(o) {
 		//// OUTPUT
-		fprintf(stdout, "\nGenerating output\n");
+		time ( &rawtime );
+		timeinfo = localtime ( &rawtime );
+		fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		fprintf(stdout, "Generating output\n");
 		if( !(fp = fopen(out_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
 			return 1;
