@@ -70,11 +70,11 @@
 	  node_t * add_out_kstep_edges(node_t *, edge_t *);
 
 	 /*
-	  *
+	  * If there is an edge out of the first node into the second (k-step)
+	  * returns the edge, NULL otherwise.
 	  *
 	  */
-	  edge_t * exist_edge(node_t *, edge_t *, char *);
-	  int update_edge(edge_t *);
+	  edge_t * exist_edge(node_t *, node_t *);
 
 	 /*
 	  * Creates (and allocates) a new edge between two nodes

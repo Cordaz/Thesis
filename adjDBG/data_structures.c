@@ -149,55 +149,15 @@ node_t * add_out_kstep_edges(node_t * n, edge_t * e) {
 
 }
 
-int update_edge(edge_t * e) {
-	edge_t * t1, * t2;
-	node_t * from = e->from;
-	node_t * to = e->to;
-
-	if (t1 = exist_edge(from, e, "out")) {
-		t1->count += 1;
-	} else if (t2 = exist_edge(to, e, "in")) {
-		t2->count += 1;
-	}
-	if(!t1) {
-		if (!add_out_kstep_edges(from, e)) {
-			return 1;
+edge_t * exist_edge(node_t * n0, node_t * n1) {
+	list_edge_t * le;
+	le = n0->out_kstep;
+	while(le) {
+		if(le->e->to->id == n1->id) {
+			return le->e;
 		}
+		le = le->next;
 	}
-
-	if (!t2) {
-		if(!add_in_kstep_edges(to, e)) {
-			return 1;
-		}
-	}
-
-	if(t1 && t2) {
-		return -1; //Flag: can free memory
-	}
-
-	return 0;
-}
-
-edge_t * exist_edge(node_t * n, edge_t * e, char * type) {
-	list_edge_t * t;
-	if( strcmp(type, "out") == 0 ) {
-		t = n->out_kstep;
-		while(t) {
-			if (t->e->to->id == e->to->id && t->e->from->id == e->from->id) {
-				return t->e;
-			}
-			t = t->next;
-		}
-	} else if ( strcmp(type, "in") == 0 ) {
-		t = n->in_kstep;
-		while(t) {
-			if (t->e->to->id == e->to->id && t->e->from->id == e->from->id) {
-				return t->e;
-			}
-			t = t->next;
-		}
-	}
-
 	return NULL;
 }
 

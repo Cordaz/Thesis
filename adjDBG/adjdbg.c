@@ -3,7 +3,7 @@
 #include <malloc.h>
 #include <stdlib.h>
 #include <math.h>
-#include "../dbg/data_structures.h"
+#include "data_structures.h"
 #include "../utilities/my_lib.h"
 #include "../utilities/FIFO.h"
 
@@ -14,7 +14,8 @@
 #define IN_FORMAT 1
 #define K_ARG 2
 #define L_ARG 4
-#define IN_FILE 6
+#define O_ARG 6
+#define IN_FILE 7
 #define MIN_ARGS 2
 
 #define BUFFER 256
@@ -26,19 +27,23 @@ graph_t * build_graph(double, double, int);
 int map_read(char *, int, int, graph_t *, fifo_t *);
 node_t * get_successor(node_t *, int, char);
 
+int created_edges;
+
 
 int main (int argc, char * argv[]) {
 	int k = 10;
 	int l = 34;
+	int o = 0;
 	//// Check args
 	int input_format = 0;
 	int l_arg = L_ARG;
+	int o_arg = O_ARG;
 	int in_file = IN_FILE;
 	char input_file[BUFFER+1];
 	char out_file[BUFFER+1];
 	argc -= 1;
 	if (argc < MIN_ARGS) {
-		fprintf(stdout, "Usage: (--fasta|--fastq) [-k K (default 10)] [-l reads_len (default 34)] input_file_no_ext\n");
+		fprintf(stdout, "Usage: (--fasta|--fastq) [-k K (default 10)] [-l reads_len (default 34)] [-o] input_file_no_ext\n");
 		return 1;
 	} else {
 		if ( strcmp(argv[K_ARG], "-k") == 0 ) {
@@ -46,11 +51,18 @@ int main (int argc, char * argv[]) {
 		} else {
 			in_file -= 2;
 			l_arg -= 2;
+			o_arg -= 2;
 		}
 		if ( strcmp(argv[l_arg], "-l") == 0 ){
 			l = atoi(argv[l_arg + 1]);
 		} else {
 			in_file -= 2;
+			o_arg -= 2;
+		}
+		if ( strcmp(argv[o_arg], "-o") == 0 ){
+			o = 1;
+		} else {
+			in_file -= 1;
 		}
 		strncpy(input_file, argv[in_file], BUFFER);
 		strncpy(out_file, input_file, BUFFER);
@@ -62,7 +74,7 @@ int main (int argc, char * argv[]) {
 			input_format = FASTQ;
 			strcat(input_file, ".fastq");
 		} else {
-			fprintf(stdout, "Usage: (--fasta|--fastq) [-k K (default 34)] input_file_no_ext\n");
+			fprintf(stdout, "Usage: (--fasta|--fastq) [-k K (default 34)] [-o] input_file_no_ext\n");
 			return 1;
 		}
 	}
@@ -109,6 +121,9 @@ int main (int argc, char * argv[]) {
 	else //is FASTQ
 		skip_line = 4;
 
+
+	created_edges = 0;
+
 	//Read first line
 	fgets(buf, BUFFER, fp);
 	i=0;
@@ -122,6 +137,7 @@ int main (int argc, char * argv[]) {
 			while( (index = get_next_substring(read, index, k, &sublen)) != -1 ) {
 				//Each substring hsould be mapped
 				if (map_read(read+index, sublen, k, dbg, q)) {
+					fprintf(stdout, "ERROR: couldn't allocate\n");
 					return 1;
 				}
 				index = index + sublen;
@@ -135,40 +151,52 @@ int main (int argc, char * argv[]) {
 	}
 
 	fclose(fp);
-	//// OUTPUT
-	fprintf(stdout, "Generating output\n");
-	if( !(fp = fopen(out_file, "w+")) ) {
-		fprintf(stdout, "Error: can't open %s\n", out_file);
-		return 1;
-	}
-	fprintf(fp, "node\tin_nodes\tout_nodes\tin_nodes_kstep\tout_nodes_kstep\n");
-	list_edge_t * le;
-	for(i=0; i<nodes; i++) {
-		fprintf(fp, "%s\t", dbg->nodes[i]->seq);
-		le = dbg->nodes[i]->in;
-		fprintf(fp, "%s:%d", le->e->from->seq, le->e->count);
-		while( (le = le->next) ) {
-			fprintf(fp, ";%s:%d", le->e->from->seq, le->e->count);
+
+	//// OUTPUT STATISTICS
+	fprintf(stdout, "Processing complete:\n");
+	fprintf(stdout, "\tcreated %d nodes\n", (int)nodes);
+	fprintf(stdout, "\tcreated %d 1-step edges\n", (int)edges);
+	fprintf(stdout, "\tcreated %d %d-step edges", created_edges, k/2);
+	fprintf(stdout, "[out of 4^%d (%d) maximum]\n", k, (int)pow((double)4, k));
+
+
+	if(o) {
+		//// OUTPUT
+		fprintf(stdout, "\nGenerating output\n");
+		if( !(fp = fopen(out_file, "w+")) ) {
+			fprintf(stdout, "Error: can't open %s\n", out_file);
+			return 1;
 		}
-		le = dbg->nodes[i]->out;
-		fprintf(fp, "\t%s:%d", le->e->to->seq, le->e->count);
-		while( (le = le->next) ) {
-			fprintf(fp, ";%s:%d", le->e->to->seq, le->e->count);
-		}
-		if(le = dbg->nodes[i]->in_kstep) {
-			fprintf(fp, "\t%s:%d", le->e->from->seq, le->e->count);
+		fprintf(fp, "node\tin_nodes\tout_nodes\tin_nodes_kstep\tout_nodes_kstep\n");
+		list_edge_t * le;
+		for(i=0; i<nodes; i++) {
+			fprintf(fp, "%s\t", dbg->nodes[i]->seq);
+			le = dbg->nodes[i]->in;
+			fprintf(fp, "%s:%d", le->e->from->seq, le->e->count);
 			while( (le = le->next) ) {
 				fprintf(fp, ";%s:%d", le->e->from->seq, le->e->count);
 			}
-		}
-
-		if(le = dbg->nodes[i]->out_kstep) {
+			le = dbg->nodes[i]->out;
 			fprintf(fp, "\t%s:%d", le->e->to->seq, le->e->count);
 			while( (le = le->next) ) {
 				fprintf(fp, ";%s:%d", le->e->to->seq, le->e->count);
 			}
+			if( (le = dbg->nodes[i]->in_kstep) ) {
+				fprintf(fp, "\t%s:%d", le->e->from->seq, le->e->count);
+				while( (le = le->next) ) {
+					fprintf(fp, ";%s:%d", le->e->from->seq, le->e->count);
+				}
+			}
+
+			if( (le = dbg->nodes[i]->out_kstep) ) {
+				fprintf(fp, "\t%s:%d", le->e->to->seq, le->e->count);
+				while( (le = le->next) ) {
+					fprintf(fp, ";%s:%d", le->e->to->seq, le->e->count);
+				}
+			}
+			fprintf(fp, "\n");
 		}
-		fprintf(fp, "\n");
+		fclose(fp);
 	}
 
 
@@ -205,15 +233,16 @@ int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 		n = get_successor(n, k/2, *(read+i+k/2-1));
 		n0 = dequeue(q);
 		//printf("n0: %s, n: %s, read: %s\n", n0->seq, n->seq, read);
-		if( !(e = create_edge(n0, n, hash(read+i, k))) ) {
-			return 1;
-		}
-		int flag = update_edge(e);
-		if (flag == 1) {
-			fprintf(stdout, "ERROR: couldn't allocate\n");
-			return 1;
-		} else if (flag == -1) {
-			free(e);
+		if ( (e = exist_edge(n0, n)) ) {
+			e->count = e->count + 1;
+		} else {
+			if( !(e = create_edge(n0, n, hash(read+i, k))) ) {
+				return 1;
+			}
+			created_edges++;
+			if( !(add_out_kstep_edges(n0, e)) || !(add_in_kstep_edges(n, e)) ) {
+				return 1;
+			}
 		}
 
 		q = enqueue(q, n);
