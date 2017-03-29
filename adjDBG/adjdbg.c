@@ -33,6 +33,11 @@ int map_read(char *, int, int, graph_t *, fifo_t *);
 int map_input_read(char *, int, int, graph_t *, fifo_t *);
 node_t * get_successor(node_t *, int, char);
 
+void print_tree_out(FILE *, tree_edge_t *);
+void print_inner_out(FILE *, tree_edge_t *);
+void print_tree_in(FILE *, tree_edge_t *);
+void print_inner_in(FILE *, tree_edge_t *);
+
 int created_edges;
 
 
@@ -240,19 +245,9 @@ int main (int argc, char * argv[]) {
 				fprintf(fp, ";%s", le->e->to->seq);
 			}
 
-			if( (le = dbg->nodes[i]->in_kstep) ) {
-				fprintf(fp, "\t%s:%d-%d", le->e->from->seq, le->e->count, le->e->input_count);
-				while( (le = le->next) ) {
-					fprintf(fp, ";%s:%d-%d", le->e->from->seq, le->e->count, le->e->input_count);
-				}
-			}
+			print_tree_in(fp, dbg->nodes[i]->in_kstep);
+			print_tree_out(fp, dbg->nodes[i]->out_kstep);
 
-			if( (le = dbg->nodes[i]->out_kstep) ) {
-				fprintf(fp, "\t%s:%d-%d", le->e->to->seq, le->e->count, le->e->input_count);
-				while( (le = le->next) ) {
-					fprintf(fp, ";%s:%d-%d", le->e->to->seq, le->e->count, le->e->input_count);
-				}
-			}
 			fprintf(fp, "\n");
 		}
 		fclose(fp);
@@ -458,4 +453,37 @@ graph_t * build_graph(double nodes, double edges, int k) {
 	}
 
 	return dbg;
+}
+
+
+void print_tree_out(FILE * fp, tree_edge_t * t) {
+	if(t) {
+		fprintf(fp, "\t%s:%d-%d", t->e->to->seq, t->e->count, t->e->input_count);
+		print_inner_out(fp, t->left);
+		print_inner_out(fp, t->right);
+	}
+}
+
+void print_inner_out(FILE * fp, tree_edge_t * t) {
+	if(t) {
+		fprintf(fp, ";%s:%d-%d", t->e->to->seq, t->e->count, t->e->input_count);
+		print_inner_out(fp, t->left);
+		print_inner_out(fp, t->right);
+	}
+}
+
+void print_tree_in(FILE * fp, tree_edge_t * t) {
+	if(t) {
+		fprintf(fp, "\t%s:%d-%d", t->e->from->seq, t->e->count, t->e->input_count);
+		print_inner_in(fp, t->left);
+		print_inner_in(fp, t->right);
+	}
+}
+
+void print_inner_in(FILE * fp, tree_edge_t * t) {
+	if(t) {
+		fprintf(fp, ";%s:%d-%d", t->e->from->seq, t->e->count, t->e->input_count);
+		print_inner_in(fp, t->left);
+		print_inner_in(fp, t->right);
+	}
 }

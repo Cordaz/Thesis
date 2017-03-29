@@ -22,6 +22,8 @@ node_t * create_node(int hashed, char * seq) {
 	strcpy(new->seq, seq);
 	new->in = NULL;
 	new->out = NULL;
+	new->in_kstep = NULL;
+	new->out_kstep = NULL;
 
 	return new;
 }
@@ -58,29 +60,35 @@ node_t * add_in_edges(node_t * n, edge_t * e) {
 }
 
 node_t * add_in_kstep_edges(node_t * n, edge_t * e) {
-	list_edge_t * cur, * prev;
-	cur = n->in_kstep;
-	prev = NULL;
-	while (cur) {
-		prev = cur;
-		cur = cur->next;
-	}
+	tree_edge_t * new;
+	tree_edge_t * cur;
+	tree_edge_t * prev;
 
-	list_edge_t * new;
-
-	//Build new list entry
-	new = (list_edge_t *)malloc(sizeof(list_edge_t));
-	if( !new ) {
+	if( !(new = (tree_edge_t*)malloc(sizeof(tree_edge_t))) ) {
 		return NULL;
 	}
-	new->e = e;
-	new->next = NULL;
 
-	if( !prev ) {
-		//Non existing list, add reference in node
+	new->e = e;
+
+	prev = NULL;
+	cur = n->in_kstep;
+
+	while(cur) {
+		prev = cur;
+		if (new->e->from->id < cur->e->from->id) {
+			cur = cur->left;
+		} else {
+			cur = cur->right;
+		}
+	}
+	new->p = prev;
+	if(prev == NULL) {
+		//Was Empty
 		n->in_kstep = new;
+	} else if (new->e->from->id < prev->e->from->id) {
+		prev->left = new;
 	} else {
-		prev->next = new;
+		prev->right = new;
 	}
 
 	return n;
@@ -120,44 +128,60 @@ node_t * add_out_edges(node_t * n, edge_t * e) {
 
 
 node_t * add_out_kstep_edges(node_t * n, edge_t * e) {
-	list_edge_t * cur, * prev;
-	cur = n->out_kstep;
-	prev = NULL;
-	while (cur) {
-		prev = cur;
-		cur = cur->next;
-	}
+	tree_edge_t * new;
+	tree_edge_t * cur;
+	tree_edge_t * prev;
 
-	list_edge_t * new;
-
-	//Build new list entry
-	new = (list_edge_t *)malloc(sizeof(list_edge_t));
-	if( !new ) {
+	if( !(new = (tree_edge_t*)malloc(sizeof(tree_edge_t))) ) {
 		return NULL;
 	}
-	new->e = e;
-	new->next = NULL;
 
-	if( !prev ) {
-		//Non existing list, add reference in node
+	new->e = e;
+
+	prev = NULL;
+	cur = n->out_kstep;
+
+	while(cur) {
+		prev = cur;
+		if (new->e->to->id < cur->e->to->id) {
+			cur = cur->left;
+		} else {
+			cur = cur->right;
+		}
+	}
+	new->p = prev;
+	if(prev == NULL) {
+		//Was Empty
 		n->out_kstep = new;
+	} else if (new->e->to->id < prev->e->to->id) {
+		prev->left = new;
 	} else {
-		prev->next = new;
+		prev->right = new;
 	}
 
 	return n;
 
 }
 
-edge_t * exist_edge(node_t * n0, node_t * n1) {
-	list_edge_t * le;
-	le = n0->out_kstep;
-	while(le) {
-		if(le->e->to->id == n1->id) {
-			return le->e;
-		}
-		le = le->next;
+tree_edge_t * search_tree(tree_edge_t * t, int key) {
+	if (t == NULL) {
+		return NULL;
 	}
+	if (t->e->to->id == key) {
+		return t;
+	}
+	if (key < t->e->to->id) {
+		return search_tree(t->left, key);
+	}
+	return search_tree(t->right, key);
+}
+
+edge_t * exist_edge(node_t * n0, node_t * n1) {
+	tree_edge_t * t = n0->out_kstep;
+	t = search_tree(t, n1->id);
+
+	if (t)
+		return t->e;
 	return NULL;
 }
 

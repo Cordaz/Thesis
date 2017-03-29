@@ -12,13 +12,20 @@
 		struct list_edge_s * next;
 	} list_edge_t;
 
+	typedef struct tree_edge_s {
+		struct edge_s * e;
+		struct tree_edge_s * p;
+		struct tree_edge_s * left;
+		struct tree_edge_s * right;
+	} tree_edge_t;
+
 	typedef struct node_s {
 		int id;
 		char * seq;
 		list_edge_t * in;
 		list_edge_t * out;
-		list_edge_t * in_kstep;
-		list_edge_t * out_kstep;
+		tree_edge_t * in_kstep;
+		tree_edge_t * out_kstep;
 	} node_t;
 
 	typedef struct edge_s {
