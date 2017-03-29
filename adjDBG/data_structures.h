@@ -24,6 +24,7 @@
 	typedef struct edge_s {
 		int id;
 		int count;
+		int input_count;
 		node_t * from;
 		node_t * to;
 	} edge_t;
