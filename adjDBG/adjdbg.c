@@ -104,7 +104,7 @@ int main (int argc, char * argv[]) {
 	int sublen;
 	char buf[BUFFER+1];
 	char * read;
-	if( !(read = (char*)malloc(sizeof(char) * l+1)) ) {
+	if( !(read = (char*)malloc(sizeof(char) * (l+1))) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 		return 1;
 	}
