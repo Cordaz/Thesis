@@ -34,15 +34,13 @@ int map_read(char *, int, int, graph_t *, fifo_t *);
 int map_input_read(char *, int, int, graph_t *, fifo_t *);
 node_t * get_successor(node_t *, int, char);
 
-int created_edges;
-
 
 int main (int argc, char * argv[]) {
 	time_t rawtime;
 	struct tm * timeinfo;
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 
 	int k = K;
 	int l = L;
@@ -126,7 +124,7 @@ int main (int argc, char * argv[]) {
 	}
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Empty De Bruijn graph built\n");
 	fprintf(stdout, "\t\tcreated %d nodes\n", (int)nodes);
 	fprintf(stdout, "\t\tcreated %d 1-step edges\n", (int)edges);
@@ -145,7 +143,7 @@ int main (int argc, char * argv[]) {
 	//// OPENING READS FILE
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Reading %s\n", input_file);
 
 	if( !(fp = fopen(input_file, "r")) ) {
@@ -158,8 +156,6 @@ int main (int argc, char * argv[]) {
 	else //is FASTQ
 		skip_line = 4;
 
-
-	created_edges = 0;
 
 	//Read first line
 	fgets(buf, BUFFER, fp);
@@ -190,17 +186,15 @@ int main (int argc, char * argv[]) {
 
 	fclose(fp);
 
-	//// OUTPUT STATISTICS
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Processing of ChIP-seq complete\n");
 
-	int old_created_edges = created_edges;
 	//// MAPPING CONTROL FILE
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Reading %s\n", control_file);
 
 	if( !(fp = fopen(control_file, "r")) ) {
@@ -236,18 +230,24 @@ int main (int argc, char * argv[]) {
 
 	fclose(fp);
 
-	//// OUTPUT STATISTICS
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Processing of Input complete\n");
+
+
+	//// WORKING ON FILLED GRAPH
+
+
+
+	//// END WORKING
 
 
 	if(o) {
 		//// OUTPUT
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
-		fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 		fprintf(stdout, "Generating output\n");
 		if( !(fp = fopen(out_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
@@ -277,7 +277,7 @@ int main (int argc, char * argv[]) {
 		fclose(fp);
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
-		fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 		fprintf(stdout, "Output generated\n");
 	}
 
