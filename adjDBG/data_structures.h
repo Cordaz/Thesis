@@ -3,22 +3,14 @@
 
 	//// PROTOTYPES
 	struct node_s;
-	struct edge_s;
-	struct list_edge_s;
-
-
-	typedef struct list_edge_s {
-		struct edge_s * e;
-		struct list_edge_s * next;
-	} list_edge_t;
 
 	typedef struct node_s {
 		int id;
 		char * seq;
-		list_edge_t * in;
-		list_edge_t * out;
-		list_edge_t * in_kstep;
-		list_edge_t * out_kstep;
+		struct edge_s * in[4];
+		struct edge_s * out[4];
+		struct edge_s ** in_kstep;
+		struct edge_s ** out_kstep;
 	} node_t;
 
 	typedef struct edge_s {
@@ -44,38 +36,8 @@
 	 * Return NULL if can't create node.
 	 *
 	 */
-	node_t * create_node(int, char *);
+	node_t * create_node(int, char *, int);
 
-	/*
-	 * Add edge to in-list.
-	 *
-	 */
-	node_t * add_in_edges(node_t *, edge_t *);
-
-	/*
-	 * Add edge to out-list.
-	 *
-	 */
-	 node_t * add_out_edges(node_t *, edge_t *);
-
-	 /*
-	  * Add edge to in-list.
-	  *
-	  */
-	 node_t * add_in_kstep_edges(node_t *, edge_t *);
-
-	 /*
-	  * Add edge to out-list.
-	  *
-	  */
-	  node_t * add_out_kstep_edges(node_t *, edge_t *);
-
-	 /*
-	  * If there is an edge out of the first node into the second (k-step)
-	  * returns the edge, NULL otherwise.
-	  *
-	  */
-	  edge_t * exist_edge(node_t *, node_t *);
 
 	 /*
 	  * Creates (and allocates) a new edge between two nodes

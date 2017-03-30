@@ -3,6 +3,7 @@
 #include <malloc.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include "data_structures.h"
 #include "../utilities/my_lib.h"
 #include "../utilities/FIFO.h"
@@ -37,6 +38,12 @@ int created_edges;
 
 
 int main (int argc, char * argv[]) {
+	time_t rawtime;
+	struct tm * timeinfo;
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] Starting\n", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+
 	int k = K;
 	int l = L;
 	int o = 0;
@@ -99,7 +106,7 @@ int main (int argc, char * argv[]) {
 	//// END - PARSING ARGS
 
 	//// -----------------------
-	int i;
+	int i, j;
 	int index;
 	int sublen;
 	char buf[BUFFER+1];
@@ -117,9 +124,13 @@ int main (int argc, char * argv[]) {
 		fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 		return 1;
 	}
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Empty De Bruijn graph built\n");
-	fprintf(stdout, "\tcreated %d nodes\n", (int)nodes);
-	fprintf(stdout, "\tcreated %d 1-step edges\n", (int)edges);
+	fprintf(stdout, "\t\tcreated %d nodes\n", (int)nodes);
+	fprintf(stdout, "\t\tcreated %d 1-step edges\n", (int)edges);
+	fprintf(stdout, "\t\tcreated %d %d-step edges\n", (int)(nodes*nodes), k/2);
 
 	//// INIT QUEUE
 	fifo_t * q;
@@ -128,9 +139,15 @@ int main (int argc, char * argv[]) {
 		return 1;
 	}
 
-	//// OPENING READS FILE
-	fprintf(stdout, "Reading %s\n", input_file);
 	FILE * fp;
+
+
+	//// OPENING READS FILE
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "Reading %s\n", input_file);
+
 	if( !(fp = fopen(input_file, "r")) ) {
 		fprintf(stdout, "[ERROR] can't open %s\n", input_file);
 		return 1;
@@ -152,6 +169,7 @@ int main (int argc, char * argv[]) {
 		if(i==2) {
 			//This line has the read
 			strncpy(read, buf, l); //Remove '\n', ensure length
+			read[l] = '\0';
 			//printf("%s\n", read);
 			index = 0;
 			while( (index = get_next_substring(read, index, k, &sublen)) != -1 ) {
@@ -173,12 +191,16 @@ int main (int argc, char * argv[]) {
 	fclose(fp);
 
 	//// OUTPUT STATISTICS
-	fprintf(stdout, "Processing of ChIP-seq complete:\n");
-	fprintf(stdout, "\tcreated %d %d-step edges", created_edges, k/2);
-	fprintf(stdout, "[out of 4^%d (%d) maximum]\n\n", k, (int)pow((double)4, k));
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "Processing of ChIP-seq complete\n");
 
 	int old_created_edges = created_edges;
 	//// MAPPING CONTROL FILE
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Reading %s\n", control_file);
 
 	if( !(fp = fopen(control_file, "r")) ) {
@@ -193,6 +215,7 @@ int main (int argc, char * argv[]) {
 		if(i==2) {
 			//This line has the read
 			strncpy(read, buf, l); //Remove '\n', ensure length
+			read[l] = '\0';
 			//printf("%s\n", read);
 			index = 0;
 			while( (index = get_next_substring(read, index, k, &sublen)) != -1 ) {
@@ -214,49 +237,46 @@ int main (int argc, char * argv[]) {
 	fclose(fp);
 
 	//// OUTPUT STATISTICS
-	fprintf(stdout, "Processing of Input complete:\n");
-	fprintf(stdout, "\tcreated new %d %d-step edges\n", (created_edges - old_created_edges), k/2);
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "Processing of Input complete\n");
 
 
 	if(o) {
 		//// OUTPUT
-		fprintf(stdout, "\nGenerating output\n");
+		time ( &rawtime );
+		timeinfo = localtime ( &rawtime );
+		fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		fprintf(stdout, "Generating output\n");
 		if( !(fp = fopen(out_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
 			return 1;
 		}
 		fprintf(fp, "node\tin_nodes\tout_nodes\tin_nodes_kstep(node:count-input_count)\tout_nodes_kstep(node:count-input_count)\n");
-		list_edge_t * le;
 		for(i=0; i<nodes; i++) {
-			fprintf(fp, "%s\t", dbg->nodes[i]->seq);
-			le = dbg->nodes[i]->in;
-			fprintf(fp, "%s", le->e->from->seq);
-			while( (le = le->next) ) {
-				fprintf(fp, ";%s", le->e->from->seq);
+			fprintf(fp, "%s", dbg->nodes[i]->seq);
+			fprintf(fp, "\t%s", dbg->nodes[i]->in[0]->from->seq);
+			for(j=1; j<4; j++) {
+				fprintf(fp, ";%s", dbg->nodes[i]->in[j]->from->seq);
 			}
-			le = dbg->nodes[i]->out;
-			fprintf(fp, "\t%s", le->e->to->seq);
-			while( (le = le->next) ) {
-				fprintf(fp, ";%s", le->e->to->seq);
+			fprintf(fp, "\t%s", dbg->nodes[i]->out[0]->to->seq);
+			for(j=1; j<4; j++) {
+				fprintf(fp, ";%s", dbg->nodes[i]->out[j]->to->seq);
 			}
-
-			if( (le = dbg->nodes[i]->in_kstep) ) {
-				fprintf(fp, "\t%s:%d-%d", le->e->from->seq, le->e->count, le->e->input_count);
-				while( (le = le->next) ) {
-					fprintf(fp, ";%s:%d-%d", le->e->from->seq, le->e->count, le->e->input_count);
-				}
+			fprintf(fp, "\t%s:%d-%d", dbg->nodes[i]->in_kstep[0]->from->seq, dbg->nodes[i]->in_kstep[0]->count, dbg->nodes[i]->in_kstep[0]->input_count);
+			for(j=1; j<nodes; j++) {
+				fprintf(fp, ";%s:%d-%d", dbg->nodes[i]->in_kstep[j]->from->seq, dbg->nodes[i]->in_kstep[j]->count, dbg->nodes[i]->in_kstep[j]->input_count);
 			}
-
-			if( (le = dbg->nodes[i]->out_kstep) ) {
-				fprintf(fp, "\t%s:%d-%d", le->e->to->seq, le->e->count, le->e->input_count);
-				while( (le = le->next) ) {
-					fprintf(fp, ";%s:%d-%d", le->e->to->seq, le->e->count, le->e->input_count);
-				}
+			fprintf(fp, "\t%s:%d-%d", dbg->nodes[i]->out_kstep[0]->to->seq, dbg->nodes[i]->out_kstep[0]->count, dbg->nodes[i]->out_kstep[0]->input_count);
+			for(j=1; j<nodes; j++) {
+				fprintf(fp, ";%s:%d-%d", dbg->nodes[i]->out_kstep[j]->to->seq, dbg->nodes[i]->out_kstep[j]->count, dbg->nodes[i]->out_kstep[j]->input_count);
 			}
 			fprintf(fp, "\n");
 		}
 		fclose(fp);
 	}
+
 
 
 	return 0;
@@ -292,18 +312,7 @@ int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 		n = get_successor(n, k/2, *(read+i+k/2-1));
 		n0 = dequeue(q);
 		//printf("n0: %s, n: %s, read: %s\n", n0->seq, n->seq, read);
-		if ( (e = exist_edge(n0, n)) ) {
-			e->count = e->count + 1;
-		} else {
-			if( !(e = create_edge(n0, n, hash(read+i, k))) ) {
-				return 1;
-			}
-			e->count = e->count + 1;
-			created_edges++;
-			if( !(add_out_kstep_edges(n0, e)) || !(add_in_kstep_edges(n, e)) ) {
-				return 1;
-			}
-		}
+		dbg->nodes[n0->id]->out_kstep[n->id]->count += 1;
 
 		q = enqueue(q, n);
 	}
@@ -328,18 +337,8 @@ int map_input_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 		n = get_successor(n, k/2, *(read+i+k/2-1));
 		n0 = dequeue(q);
 		//printf("n0: %s, n: %s, read: %s\n", n0->seq, n->seq, read);
-		if ( (e = exist_edge(n0, n)) ) {
-			e->input_count = e->input_count + 1;
-		} else {
-			if( !(e = create_edge(n0, n, hash(read+i, k))) ) {
-				return 1;
-			}
-			e->input_count = e->input_count + 1;
-			created_edges++;
-			if( !(add_out_kstep_edges(n0, e)) || !(add_in_kstep_edges(n, e)) ) {
-				return 1;
-			}
-		}
+		dbg->nodes[n0->id]->out_kstep[n->id]->input_count += 1;
+
 
 		q = enqueue(q, n);
 	}
@@ -349,14 +348,10 @@ int map_input_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 
 
 node_t * get_successor(node_t * n, int k, char c) {
-	list_edge_t * le = n->out;
-	while(le) {
-		//printf("%x ", le);
-		//printf("%s;%c\t", le->e->to->seq, c);
-		if(le->e->to->seq[k-1] == c) {
-			return le->e->to;
-		}
-		le = le->next;
+	int i;
+	for(i=0; i<4; i++) {
+		if( n->out[i]->to->seq[k-1] == c )
+			return n->out[i]->to;
 	}
 	return NULL;
 }
@@ -365,7 +360,7 @@ node_t * get_successor(node_t * n, int k, char c) {
 
 
 graph_t * build_graph(double nodes, double edges, int k) {
-	int i;
+	int i, j;
 	int mask_hash = (int)nodes - 1;
 
 	graph_t * dbg;
@@ -382,78 +377,58 @@ graph_t * build_graph(double nodes, double edges, int k) {
 		return NULL;
 	}
 
-	char * kmer;
-	if ( !(kmer = (char*)malloc(sizeof(char) * (k+1))) ) {
+	char ** kmer;
+	if( !(kmer = (char**)malloc(sizeof(char*)*nodes)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 		return NULL;
 	}
-
-	for (i=0; i<nodes; i++) {
-		dbg->nodes[i] = NULL;
-		dbg->edges[i] = NULL;
+	for(i=0; i<nodes; i++) {
+		if ( !(kmer[i] = (char*)malloc(sizeof(char) * (k+1))) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
+			return NULL;
+		}
 	}
-	for( ; i<edges; i++) {
-		dbg->edges[i] = NULL;
+
+	node_t * n;
+
+	//Create nodes
+	for (i=0; i<nodes; i++) {
+		rev_hash(i, k, kmer[i]);
+		if( !(n = create_node(i, kmer[i], nodes)) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
+			return NULL;
+		}
+		dbg->nodes[i] = n;
 	}
 
 	int n0_hash, n1_hash;
-	node_t * n0, * n1;
 	edge_t * e;
 
-	for(i=0; i<edges; i++) {
-		//Each i is a coded kmer
-
+	//Create 1-step edges
+	for (i=0; i<edges; i++) {
 		n0_hash = i >> 2;
 		n1_hash = i & mask_hash;
-		//printf("%x\t%x\t%x\n", i, n0_hash, n1_hash);
 
-		if( !(n0 = dbg->nodes[n0_hash]) ) {
-			rev_hash(n0_hash, k, kmer);
-			if( !(n0 = create_node(n0_hash, kmer)) ) {
-				fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-				return NULL;
-			}
-			if ( !(dbg->nodes[n0_hash] = (node_t*)malloc(sizeof(node_t))) ) {
-				fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-				return NULL;
-			}
-			dbg->nodes[n0_hash] = n0;
+		if( !(e = create_edge(dbg->nodes[n0_hash], dbg->nodes[n1_hash], i)) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
+			return NULL;
 		}
 
-		if( !(n1 = dbg->nodes[n1_hash]) ) {
-			rev_hash(n1_hash, k, kmer);
-			if( !(n1 = create_node(n1_hash, kmer)) ) {
-				fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-				return NULL;
-			}
-			if ( !(dbg->nodes[n1_hash] = (node_t*)malloc(sizeof(node_t))) ) {
-				fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-				return NULL;
-			}
-			dbg->nodes[n1_hash] = n1;
-		}
+		dbg->edges[i] = e;
+		dbg->nodes[n0_hash]->out[(i%4)] = e;
+		dbg->nodes[n1_hash]->in[n0_hash >> 2*(k-1)] = e;
 
-		if (!( e = dbg->edges[i] )) {
-			//Create edge
-			if( !(e = create_edge(n0, n1, i) ) ) {
+	}
+
+	//Create k/2-step edges
+	for (i=0; i<nodes; i++) {
+		for(j=0; j<nodes; j++) {
+			if( !(e = create_edge(dbg->nodes[i], dbg->nodes[j], i)) ) {
 				fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 				return NULL;
 			}
-			if ( !(dbg->edges[i] = (edge_t*)malloc(sizeof(edge_t))) ) {
-				fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-				return NULL;
-			}
-			dbg->edges[i] = e;
-			n0 = add_out_edges(n0, e);
-			if (!n0) {
-				fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-				return NULL;
-			}
-			n1 = add_in_edges(n1, e);
-			if (!n1) {
-				fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-				return NULL;
-			}
+			dbg->nodes[i]->out_kstep[j] = e;
+			dbg->nodes[j]->in_kstep[i] = e;
 		}
 	}
 

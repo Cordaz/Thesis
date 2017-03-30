@@ -6,8 +6,9 @@
 
 
 //// FUNCTIONS
-node_t * create_node(int hashed, char * seq) {
+node_t * create_node(int hashed, char * seq, int n) {
 	node_t * new;
+	int i;
 
 	if( !(new = (node_t *) malloc(sizeof(node_t)) ) ) {
 		fprintf(stdout, "ERROR: couldn't allocate memory\n");
@@ -20,145 +21,26 @@ node_t * create_node(int hashed, char * seq) {
 		return NULL;
 	}
 	strcpy(new->seq, seq);
-	new->in = NULL;
-	new->out = NULL;
+	for(i=0; i<4; i++) {
+		new->in[i] = NULL;
+		new->out[i] = NULL;
+	}
+	if( !(new->in_kstep = (edge_t**)malloc(sizeof(edge_t*) * n)) ) {
+		return NULL;
+	}
+	if( !(new->out_kstep = (edge_t**)malloc(sizeof(edge_t*) * n)) ) {
+		return NULL;
+	}
+	for(i=0; i<n; i++) {
+		if( !(new->in_kstep[i] = (edge_t*)malloc(sizeof(edge_t))) ) {
+			return NULL;
+		}
+		if( !(new->out_kstep[i] = (edge_t*)malloc(sizeof(edge_t))) ) {
+			return NULL;
+		}
+	}
 
 	return new;
-}
-
-
-node_t * add_in_edges(node_t * n, edge_t * e) {
-	list_edge_t * cur, * prev;
-	cur = n->in;
-	prev = NULL;
-	while (cur) {
-		prev = cur;
-		cur = cur->next;
-	}
-
-	list_edge_t * new;
-
-	//Build new list entry
-	new = (list_edge_t *)malloc(sizeof(list_edge_t));
-	if( !new ) {
-		return NULL;
-	}
-	new->e = e;
-	new->next = NULL;
-
-	if( !prev ) {
-		//Non existing list, add reference in node
-		n->in = new;
-	} else {
-		prev->next = new;
-	}
-
-	return n;
-
-}
-
-node_t * add_in_kstep_edges(node_t * n, edge_t * e) {
-	list_edge_t * cur, * prev;
-	cur = n->in_kstep;
-	prev = NULL;
-	while (cur) {
-		prev = cur;
-		cur = cur->next;
-	}
-
-	list_edge_t * new;
-
-	//Build new list entry
-	new = (list_edge_t *)malloc(sizeof(list_edge_t));
-	if( !new ) {
-		return NULL;
-	}
-	new->e = e;
-	new->next = NULL;
-
-	if( !prev ) {
-		//Non existing list, add reference in node
-		n->in_kstep = new;
-	} else {
-		prev->next = new;
-	}
-
-	return n;
-
-}
-
-
-node_t * add_out_edges(node_t * n, edge_t * e) {
-	list_edge_t * cur, * prev;
-	cur = n->out;
-	prev = NULL;
-	while (cur) {
-		prev = cur;
-		cur = cur->next;
-	}
-
-	list_edge_t * new;
-
-	//Build new list entry
-	new = (list_edge_t *)malloc(sizeof(list_edge_t));
-	if( !new ) {
-		return NULL;
-	}
-	new->e = e;
-	new->next = NULL;
-
-	if( !prev ) {
-		//Non existing list, add reference in node
-		n->out = new;
-	} else {
-		prev->next = new;
-	}
-
-	return n;
-
-}
-
-
-node_t * add_out_kstep_edges(node_t * n, edge_t * e) {
-	list_edge_t * cur, * prev;
-	cur = n->out_kstep;
-	prev = NULL;
-	while (cur) {
-		prev = cur;
-		cur = cur->next;
-	}
-
-	list_edge_t * new;
-
-	//Build new list entry
-	new = (list_edge_t *)malloc(sizeof(list_edge_t));
-	if( !new ) {
-		return NULL;
-	}
-	new->e = e;
-	new->next = NULL;
-
-	if( !prev ) {
-		//Non existing list, add reference in node
-		n->out_kstep = new;
-	} else {
-		prev->next = new;
-	}
-
-	return n;
-
-}
-
-edge_t * exist_edge(node_t * n0, node_t * n1) {
-	list_edge_t * le;
-	le = n0->out_kstep;
-	while(le) {
-		if(le->e->to->id == n1->id) {
-			return le->e;
-		}
-		le = le->next;
-	}
-	return NULL;
 }
 
 
