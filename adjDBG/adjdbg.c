@@ -42,7 +42,7 @@ int main (int argc, char * argv[]) {
 	struct tm * timeinfo;
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%d:%d:%d] Starting\n", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 
 	int k = K;
 	int l = L;
@@ -126,7 +126,7 @@ int main (int argc, char * argv[]) {
 	}
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Empty De Bruijn graph built\n");
 	fprintf(stdout, "\t\tcreated %d nodes\n", (int)nodes);
 	fprintf(stdout, "\t\tcreated %d 1-step edges\n", (int)edges);
@@ -145,7 +145,7 @@ int main (int argc, char * argv[]) {
 	//// OPENING READS FILE
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Reading %s\n", input_file);
 
 	if( !(fp = fopen(input_file, "r")) ) {
@@ -193,14 +193,14 @@ int main (int argc, char * argv[]) {
 	//// OUTPUT STATISTICS
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Processing of ChIP-seq complete\n");
 
 	int old_created_edges = created_edges;
 	//// MAPPING CONTROL FILE
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Reading %s\n", control_file);
 
 	if( !(fp = fopen(control_file, "r")) ) {
@@ -239,7 +239,7 @@ int main (int argc, char * argv[]) {
 	//// OUTPUT STATISTICS
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Processing of Input complete\n");
 
 
@@ -247,7 +247,7 @@ int main (int argc, char * argv[]) {
 		//// OUTPUT
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
-		fprintf(stdout, "[%d:%d:%d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 		fprintf(stdout, "Generating output\n");
 		if( !(fp = fopen(out_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
@@ -275,6 +275,10 @@ int main (int argc, char * argv[]) {
 			fprintf(fp, "\n");
 		}
 		fclose(fp);
+		time ( &rawtime );
+		timeinfo = localtime ( &rawtime );
+		fprintf(stdout, "[%2d:%2d:%2d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		fprintf(stdout, "Output generated\n");
 	}
 
 
