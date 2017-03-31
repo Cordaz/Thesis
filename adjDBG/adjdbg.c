@@ -27,6 +27,8 @@
 #define FASTA 1
 #define FASTQ 2
 
+#define MAX_SUBS 2 //TODO as arg
+
 ///////// FUNCTIONS PROTOTYPES
 
 graph_t * build_graph(double, double, int);
@@ -38,9 +40,6 @@ node_t * get_successor(node_t *, int, char);
 int main (int argc, char * argv[]) {
 	time_t rawtime;
 	struct tm * timeinfo;
-	time ( &rawtime );
-	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 
 	int k = K;
 	int l = L;
@@ -54,6 +53,7 @@ int main (int argc, char * argv[]) {
 	char input_file[BUFFER+1];
 	char control_file[BUFFER+1];
 	char out_file[BUFFER+1];
+	char graph_file[BUFFER+1];
 	argc -= 1;
 	if (argc < MIN_ARGS) {
 		fprintf(stdout, "Usage: (--fasta|--fastq) [-k K] [-l L] [-o] control_file_no_ext input_file_no_ext\n\n");
@@ -87,7 +87,9 @@ int main (int argc, char * argv[]) {
 		strncpy(control_file, argv[c_file], BUFFER);
 		strncpy(input_file, argv[in_file], BUFFER);
 		strncpy(out_file, input_file, BUFFER);
-		strcat(out_file, ".graph");
+		strcat(out_file, ".stat");
+		strncpy(graph_file, input_file, BUFFER);
+		strcat(graph_file, ".graph");
 		if (strcmp("--fasta", argv[IN_FORMAT]) == 0) {
 			input_format = FASTA;
 			strcat(input_file, ".fa");
@@ -126,9 +128,9 @@ int main (int argc, char * argv[]) {
 	timeinfo = localtime ( &rawtime );
 	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(stdout, "Empty De Bruijn graph built\n");
-	fprintf(stdout, "\t\tcreated %d nodes\n", (int)nodes);
-	fprintf(stdout, "\t\tcreated %d 1-step edges\n", (int)edges);
-	fprintf(stdout, "\t\tcreated %d %d-step edges\n", (int)(nodes*nodes), k/2);
+	fprintf(stdout, "           created %d nodes\n", (int)nodes);
+	fprintf(stdout, "           created %d 1-step edges\n", (int)edges);
+	fprintf(stdout, "           created %d %d-step edges\n", (int)(nodes*nodes), k/2);
 
 	//// INIT QUEUE
 	fifo_t * q;
@@ -237,8 +239,123 @@ int main (int argc, char * argv[]) {
 
 
 	//// WORKING ON FILLED GRAPH
+	int expected_sub = 3*k/2;
+	char ** substituted;
+	if( !(substituted = (char**)malloc(sizeof(char*)*expected_sub)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+	for(i=0; i<expected_sub; i++) {
+		if( !(substituted[i] = (char*)malloc(sizeof(char) * (k/2 + 1) )) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate\n");
+			return 1;
+		}
+	}
+	char ** substituted_adj;
+	if( !(substituted_adj = (char**)malloc(sizeof(char*)*expected_sub)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+	for(i=0; i<expected_sub; i++) {
+		if( !(substituted_adj[i] = (char*)malloc(sizeof(char) * (k/2 + 1) )) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate\n");
+			return 1;
+		}
+	}
+
+	char * kmer;
+	char * adjkmer;
+	char * reference;
+	if( !(reference = (char*)malloc(sizeof(char)*(k+1))) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+	node_t * substituted_node;
+	int h, m;
+	unsigned long * counts;
+	if( !(counts = (unsigned long*)malloc(sizeof(unsigned long) * nodes * nodes)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+	unsigned long * counts_input;
+	if( !(counts_input = (unsigned long*)malloc(sizeof(unsigned long) * nodes * nodes)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+	unsigned long count;
+	unsigned long count_input;
+	unsigned long total = 0;
+	unsigned long total_input = 0;
+
+	int subhash;
+	int adjhash;
+
+	//// Approximate count of k-mer
+	for(i=0; i<nodes; i++) {
+		kmer = dbg->nodes[i]->seq;
+		substitute_all(kmer, substituted, k/2);
 
 
+		for(m=0; m<nodes; m++) {
+			strcpy(reference, kmer);
+			strcat(reference, dbg->nodes[i]->out_kstep[m]->to->seq); //Reference k-mer
+			count = (unsigned long)1; //Pseudo-count
+			count_input = (unsigned long)1; //Pseudo-count
+
+
+			//Iterate over substitution
+			for(j=0; j<expected_sub; j++) {
+				substituted_node = dbg->nodes[hash(substituted[j], k/2)];
+
+				//Iterate over adjacent k-mer
+				adjkmer = substituted_node->out_kstep[m]->to->seq;
+				adjhash = hash(adjkmer, k/2);
+				count += (unsigned long)substituted_node->out_kstep[adjhash]->count;
+				count += (unsigned long)dbg->nodes[i]->out_kstep[adjhash]->count;
+				count_input += (unsigned long)substituted_node->out_kstep[adjhash]->input_count;
+				count_input += (unsigned long)dbg->nodes[i]->out_kstep[adjhash]->input_count;
+				substitute_all(adjkmer, substituted_adj, k/2); //All substitution of second half
+				for(h=0; h<expected_sub; h++) {
+					subhash = hash(substituted_adj[h], k/2);
+					count += (unsigned long)substituted_node->out_kstep[subhash]->count;
+					count += (unsigned long)dbg->nodes[i]->out_kstep[subhash]->count;
+					count_input += (unsigned long)substituted_node->out_kstep[subhash]->input_count;
+					count_input += (unsigned long)dbg->nodes[i]->out_kstep[subhash]->input_count;
+				}
+			}
+			counts[hash(reference, k)] = count;
+			counts_input[hash(reference, k)] = count_input;
+			total += count;
+			total_input += count_input;
+		}
+	}
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "Counting ended\n");
+	fprintf(stdout, "           Counted %lu total k-mer for IP\n", total);
+	fprintf(stdout, "           Counted %lu total k-mer for Input\n", total_input);
+	fprintf(stdout, "           Generating output\n");
+
+	//// OUTPUT
+	if( !(fp = fopen(out_file, "w+")) ) {
+		fprintf(stdout, "[ERROR] can't open %s\n", out_file);
+		return 1;
+	}
+	double freq;
+	double freq_input;
+	double diff;
+	double diff_log2;
+
+	fprintf(fp, "k-mer\tIP_count\tIP_freq\tInput_count\tInput_freq\tdiff\tdiff_log2\n");
+	for(i=0; i<nodes*nodes; i++) {
+		rev_hash(i, k, reference);
+		freq = (double)counts[i]/(double)total;
+		freq_input = (double)counts_input[i]/(double)total_input;
+		diff = freq/freq_input;
+		diff_log2 = log2(diff);
+		fprintf(fp, "%s\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\n", reference, counts[i], freq, counts_input[i], freq_input, diff, diff_log2);
+	}
 
 	//// END WORKING
 
@@ -248,8 +365,8 @@ int main (int argc, char * argv[]) {
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
 		fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
-		fprintf(stdout, "Generating output\n");
-		if( !(fp = fopen(out_file, "w+")) ) {
+		fprintf(stdout, "Generating output: graph\n");
+		if( !(fp = fopen(graph_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
 			return 1;
 		}
@@ -301,7 +418,6 @@ int main (int argc, char * argv[]) {
 
 int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 	int i;
-	edge_t * e;
 	node_t * n = dbg->nodes[hash(read, k/2)]; //Get starting node
 	node_t * n0;
 	q = enqueue(q, n);
@@ -326,7 +442,6 @@ int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 
 int map_input_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 	int i;
-	edge_t * e;
 	node_t * n = dbg->nodes[hash(read, k/2)]; //Get starting node
 	node_t * n0;
 	q = enqueue(q, n);
@@ -435,6 +550,11 @@ graph_t * build_graph(double nodes, double edges, int k) {
 			dbg->nodes[j]->in_kstep[i] = e;
 		}
 	}
+
+	for(i=0; i<nodes; i++) {
+		free(kmer[i]);
+	}
+	free(kmer);
 
 	return dbg;
 }

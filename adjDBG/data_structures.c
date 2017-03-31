@@ -35,9 +35,11 @@ node_t * create_node(int hashed, char * seq, int n) {
 		if( !(new->in_kstep[i] = (edge_t*)malloc(sizeof(edge_t))) ) {
 			return NULL;
 		}
+		new->in_kstep[i] = NULL;
 		if( !(new->out_kstep[i] = (edge_t*)malloc(sizeof(edge_t))) ) {
 			return NULL;
 		}
+		new->out_kstep[i] = NULL;
 	}
 
 	return new;
@@ -48,8 +50,8 @@ edge_t * create_edge(node_t * from, node_t * to, int hashed) {
 	edge_t * new;
 	if ( ( new = (edge_t *)malloc(sizeof(edge_t)) ) ) {
 		new->id = hashed;
-		new->count = 0;
-		new->input_count = 0;
+		new->count = 0; //Pseudo-count
+		new->input_count = 0; //Pseudo-count
 		new->from = from;
 		new->to = to;
 	}

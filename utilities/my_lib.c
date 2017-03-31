@@ -124,3 +124,35 @@ int get_next_substring(char * seq, int index, int min_l, int * len) {
 	}
 	return get_next_substring(seq, i+j, min_l, len);
 }
+
+
+int count_substitution(char * ref, char * seq, int k, int max) {
+	int i;
+	int count = 0;
+
+	for(i=0; i<k && count < max+1; i++) {
+		if(ref[i] != seq[i]) {
+			count++;
+		}
+	}
+
+	return count;
+}
+
+
+void substitute_all(char * kmer, char ** substituted, int k) {
+	const char bases[4] = {'A', 'C', 'G', 'T'};
+	int i, j, h;
+	for(i=0; i<k; i++) {
+		for(h=0; h<3; h++) {
+			strcpy(substituted[i*3+h], kmer);
+		}
+		h=0;
+		for(j=0; j<4; j++) {
+			if(kmer[k-i-1] != bases[j]) {
+				substituted[i*3+h][k-i-1] = bases[j];
+				h++;
+			}
+		}
+	}
+}

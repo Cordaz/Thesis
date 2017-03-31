@@ -42,9 +42,24 @@
 	int is_palyndrome(char *, char *);
 
 	/*
-	 *
+	 * Get the starting index of the next substring of minimum length that contains no 'N'.
+	 * Return -1 if end of string and can't be returned sufficient long string.
 	 *
 	 */
 	int get_next_substring(char *, int, int, int *);
+
+	/*
+	 * Count substitution of the two provided k-mer up to length provided
+	 * It is bounded to a max+1
+	 *
+	 */
+	int count_substitution(char * ref, char * seq, int k, int max);
+
+	/*
+	 * Compute all possible substitution of one nucleotides in the kmer.
+	 * Put the result in substituted.
+	 *
+	 */
+	void substitute_all(char * kmer, char ** substituted, int k);
 
 #endif
