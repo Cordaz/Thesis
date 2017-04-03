@@ -36,6 +36,7 @@ graph_t * build_graph(double, double, int);
 int map_read(char *, int, int, graph_t *, fifo_t *);
 int map_input_read(char *, int, int, graph_t *, fifo_t *);
 node_t * get_successor(node_t *, int, char);
+int get_base_index(char);
 
 
 int main (int argc, char * argv[]) {
@@ -276,8 +277,13 @@ int main (int argc, char * argv[]) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
+	char * support;
+	if( !(support = (char*)malloc(sizeof(char)*(k+1))) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
 	node_t * substituted_node;
-	int h, m;
+	int h, m, x;
 	unsigned long * counts;
 	if( !(counts = (unsigned long*)malloc(sizeof(unsigned long) * nodes * nodes)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
@@ -295,6 +301,30 @@ int main (int argc, char * argv[]) {
 
 	int subhash;
 	int adjhash;
+	int fullhash;
+
+
+	//// Matrix for position specific count
+	int *** psm; //Position Specific Matrix
+	if( !(psm = (int***)malloc(sizeof(int**) * nodes * nodes)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+	for(i=0; i<nodes*nodes; i++) {
+		if( !(psm[i] = (int**)malloc(sizeof(int*) * 4)) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate\n");
+			return 1;
+		}
+		for(j=0; j<4; j++) {
+			if( !(psm[i][j] = (int*)malloc(sizeof(int) * k)) ) {
+				fprintf(stdout, "[ERROR] couldn't allocate\n");
+				return 1;
+			}
+			for(h=0; h<k; h++) {
+				psm[i][j][h] = 0;
+			}
+		}
+	}
 
 	//// Approximate count of k-mer
 	for(i=0; i<nodes; i++) {
@@ -308,11 +338,16 @@ int main (int argc, char * argv[]) {
 			strcat(reference, adjkmer); //Reference k-mer
 			count = (unsigned long)1; //Pseudo-count
 			count_input = (unsigned long)1; //Pseudo-count
-
+			fullhash = hash(reference, k);
 			adjhash = hash(adjkmer, k/2);
 			count += (unsigned long)dbg->nodes[i]->out_kstep[adjhash]->count;
 			count_input += (unsigned long)dbg->nodes[i]->out_kstep[adjhash]->input_count;
 
+			if( dbg->nodes[i]->out_kstep[adjhash]->count != 0 ) {
+				for(j=0; j<k; j++) {
+					psm[fullhash][get_base_index(reference[j])][j] += dbg->nodes[i]->out_kstep[adjhash]->count;
+				}
+			}
 			substitute_all(adjkmer, substituted_adj, k/2); //All substitution of second half
 
 			//Iterate over substitution
@@ -322,18 +357,42 @@ int main (int argc, char * argv[]) {
 				//Iterate over adjacent k-mer
 				count += (unsigned long)substituted_node->out_kstep[adjhash]->count;
 				count_input += (unsigned long)substituted_node->out_kstep[adjhash]->input_count;
+				if( substituted_node->out_kstep[adjhash]->count != 0 ) {
+					strcpy(support, substituted[j]);
+					strcat(support, adjkmer);
+					//fullhash = hash(support, k);
+					for(h=0; h<k; h++) {
+						psm[fullhash][get_base_index(support[h])][h] += substituted_node->out_kstep[adjhash]->count;
+					}
+				}
 
 				for(h=0; h<expected_sub; h++) {
 					subhash = hash(substituted_adj[h], k/2);
 					count += (unsigned long)substituted_node->out_kstep[subhash]->count;
 					count_input += (unsigned long)substituted_node->out_kstep[subhash]->input_count;
+					if( substituted_node->out_kstep[subhash]->count != 0 ) {
+						strcpy(support, substituted[j]);
+						strcat(support, substituted_adj[h]);
+						//fullhash = hash(support, k);
+						for(x=0; x<k; x++) {
+							psm[fullhash][get_base_index(support[x])][x] += substituted_node->out_kstep[subhash]->count;
+						}
+					}
 				}
 			}
-			//Missing counts: first hal fixed, second half substituted
+			//Missing counts: first half fixed, second half substituted
 			for(h=0; h<expected_sub; h++) {
 				subhash = hash(substituted_adj[h], k/2);
 				count += (unsigned long)dbg->nodes[i]->out_kstep[subhash]->count;
 				count_input += (unsigned long)dbg->nodes[i]->out_kstep[subhash]->input_count;
+				if( dbg->nodes[i]->out_kstep[subhash]->count != 0 ) {
+					strcpy(support, kmer);
+					strcat(support, substituted_adj[h]);
+					//fullhash = hash(support, k);
+					for(x=0; x<k; x++) {
+						psm[fullhash][get_base_index(support[x])][x] += dbg->nodes[i]->out_kstep[subhash]->count;
+					}
+				}
 			}
 			counts[hash(reference, k)] = count;
 			counts_input[hash(reference, k)] = count_input;
@@ -488,6 +547,20 @@ node_t * get_successor(node_t * n, int k, char c) {
 }
 
 
+int get_base_index(char b) {
+	switch(b) {
+		case 'A':
+			return 0;
+		case 'C':
+			return 1;
+		case 'G':
+			return 2;
+		case 'T':
+			return 3;
+		default:
+			return -1;
+	}
+}
 
 
 graph_t * build_graph(double nodes, double edges, int k) {
