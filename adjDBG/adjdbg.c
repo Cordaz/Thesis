@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <unistd.h>
 #include "data_structures.h"
 #include "../utilities/my_lib.h"
 #include "../utilities/FIFO.h"
@@ -38,6 +39,7 @@ node_t * get_successor(node_t *, int, char);
 
 
 int main (int argc, char * argv[]) {
+	int pid = getpid();
 	time_t rawtime;
 	struct tm * timeinfo;
 
@@ -115,6 +117,10 @@ int main (int argc, char * argv[]) {
 		fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 		return 1;
 	}
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
+	fprintf(stdout, "Starting with PID %d\n", pid);
 
 	//// BUILD EMPTY GRAPH
 	double nodes = pow((double)4, (double)(k/2));
@@ -126,11 +132,11 @@ int main (int argc, char * argv[]) {
 	}
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 	fprintf(stdout, "Empty De Bruijn graph built\n");
-	fprintf(stdout, "           created %d nodes\n", (int)nodes);
-	fprintf(stdout, "           created %d 1-step edges\n", (int)edges);
-	fprintf(stdout, "           created %d %d-step edges\n", (int)(nodes*nodes), k/2);
+	fprintf(stdout, "                  created %d nodes\n", (int)nodes);
+	fprintf(stdout, "                  created %d 1-step edges\n", (int)edges);
+	fprintf(stdout, "                  created %d %d-step edges\n", (int)(nodes*nodes), k/2);
 
 	//// INIT QUEUE
 	fifo_t * q;
@@ -145,7 +151,7 @@ int main (int argc, char * argv[]) {
 	//// OPENING READS FILE
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 	fprintf(stdout, "Reading %s\n", input_file);
 
 	if( !(fp = fopen(input_file, "r")) ) {
@@ -190,13 +196,13 @@ int main (int argc, char * argv[]) {
 
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 	fprintf(stdout, "Processing of ChIP-seq complete\n");
 
 	//// MAPPING CONTROL FILE
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 	fprintf(stdout, "Reading %s\n", control_file);
 
 	if( !(fp = fopen(control_file, "r")) ) {
@@ -234,7 +240,7 @@ int main (int argc, char * argv[]) {
 
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 	fprintf(stdout, "Processing of Input complete\n");
 
 
@@ -298,30 +304,36 @@ int main (int argc, char * argv[]) {
 
 		for(m=0; m<nodes; m++) {
 			strcpy(reference, kmer);
-			strcat(reference, dbg->nodes[i]->out_kstep[m]->to->seq); //Reference k-mer
+			adjkmer = dbg->nodes[i]->out_kstep[m]->to->seq;
+			strcat(reference, adjkmer); //Reference k-mer
 			count = (unsigned long)1; //Pseudo-count
 			count_input = (unsigned long)1; //Pseudo-count
 
+			adjhash = hash(adjkmer, k/2);
+			count += (unsigned long)dbg->nodes[i]->out_kstep[adjhash]->count;
+			count_input += (unsigned long)dbg->nodes[i]->out_kstep[adjhash]->input_count;
+
+			substitute_all(adjkmer, substituted_adj, k/2); //All substitution of second half
 
 			//Iterate over substitution
 			for(j=0; j<expected_sub; j++) {
 				substituted_node = dbg->nodes[hash(substituted[j], k/2)];
 
 				//Iterate over adjacent k-mer
-				adjkmer = substituted_node->out_kstep[m]->to->seq;
-				adjhash = hash(adjkmer, k/2);
 				count += (unsigned long)substituted_node->out_kstep[adjhash]->count;
-				count += (unsigned long)dbg->nodes[i]->out_kstep[adjhash]->count;
 				count_input += (unsigned long)substituted_node->out_kstep[adjhash]->input_count;
-				count_input += (unsigned long)dbg->nodes[i]->out_kstep[adjhash]->input_count;
-				substitute_all(adjkmer, substituted_adj, k/2); //All substitution of second half
+
 				for(h=0; h<expected_sub; h++) {
 					subhash = hash(substituted_adj[h], k/2);
 					count += (unsigned long)substituted_node->out_kstep[subhash]->count;
-					count += (unsigned long)dbg->nodes[i]->out_kstep[subhash]->count;
 					count_input += (unsigned long)substituted_node->out_kstep[subhash]->input_count;
-					count_input += (unsigned long)dbg->nodes[i]->out_kstep[subhash]->input_count;
 				}
+			}
+			//Missing counts: first hal fixed, second half substituted
+			for(h=0; h<expected_sub; h++) {
+				subhash = hash(substituted_adj[h], k/2);
+				count += (unsigned long)dbg->nodes[i]->out_kstep[subhash]->count;
+				count_input += (unsigned long)dbg->nodes[i]->out_kstep[subhash]->input_count;
 			}
 			counts[hash(reference, k)] = count;
 			counts_input[hash(reference, k)] = count_input;
@@ -331,11 +343,11 @@ int main (int argc, char * argv[]) {
 	}
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
-	fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 	fprintf(stdout, "Counting ended\n");
-	fprintf(stdout, "           Counted %lu total k-mer for IP\n", total);
-	fprintf(stdout, "           Counted %lu total k-mer for Input\n", total_input);
-	fprintf(stdout, "           Generating output\n");
+	fprintf(stdout, "                  Counted %lu total k-mer for IP\n", total);
+	fprintf(stdout, "                  Counted %lu total k-mer for Input\n", total_input);
+	fprintf(stdout, "                  Generating output\n");
 
 	//// OUTPUT
 	if( !(fp = fopen(out_file, "w+")) ) {
@@ -364,7 +376,7 @@ int main (int argc, char * argv[]) {
 		//// OUTPUT
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
-		fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Generating output: graph\n");
 		if( !(fp = fopen(graph_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
@@ -394,7 +406,7 @@ int main (int argc, char * argv[]) {
 		fclose(fp);
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
-		fprintf(stdout, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Output generated\n");
 	}
 
