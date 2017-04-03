@@ -56,6 +56,7 @@ int main (int argc, char * argv[]) {
 	char input_file[BUFFER+1];
 	char control_file[BUFFER+1];
 	char out_file[BUFFER+1];
+	char psm_file[BUFFER+1];
 	char graph_file[BUFFER+1];
 	argc -= 1;
 	if (argc < MIN_ARGS) {
@@ -90,7 +91,9 @@ int main (int argc, char * argv[]) {
 		strncpy(control_file, argv[c_file], BUFFER);
 		strncpy(input_file, argv[in_file], BUFFER);
 		strncpy(out_file, input_file, BUFFER);
-		strcat(out_file, ".stat");
+		strcat(out_file, ".approx.cnt");
+		strncpy(psm_file, input_file, BUFFER);
+		strcat(psm_file, ".psm");
 		strncpy(graph_file, input_file, BUFFER);
 		strcat(graph_file, ".graph");
 		if (strcmp("--fasta", argv[IN_FORMAT]) == 0) {
@@ -413,6 +416,12 @@ int main (int argc, char * argv[]) {
 		fprintf(stdout, "[ERROR] can't open %s\n", out_file);
 		return 1;
 	}
+	FILE * fp_psm;
+	if( !(fp_psm = fopen(psm_file, "w+")) ) {
+		fprintf(stdout, "[ERROR] can't open %s\n", out_file);
+		return 1;
+	}
+
 	double freq;
 	double freq_input;
 	double diff;
@@ -426,7 +435,33 @@ int main (int argc, char * argv[]) {
 		diff = freq/freq_input;
 		diff_log2 = log2(diff);
 		fprintf(fp, "%s\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\n", reference, counts[i], freq, counts_input[i], freq_input, diff, diff_log2);
+
+
+
+		fprintf(fp_psm, "%s\n", reference);
+		fprintf(fp_psm, "A");
+		for(j=0; j<k; j++) {
+			fprintf(fp_psm, "\t%d", psm[i][0][j]);
+		}
+		fprintf(fp_psm, "\n");
+		fprintf(fp_psm, "C");
+		for(j=0; j<k; j++) {
+			fprintf(fp_psm, "\t%d", psm[i][1][j]);
+		}
+		fprintf(fp_psm, "\n");
+		fprintf(fp_psm, "G");
+		for(j=0; j<k; j++) {
+			fprintf(fp_psm, "\t%d", psm[i][2][j]);
+		}
+		fprintf(fp_psm, "\n");
+		fprintf(fp_psm, "T");
+		for(j=0; j<k; j++) {
+			fprintf(fp_psm, "\t%d", psm[i][3][j]);
+		}
+		fprintf(fp_psm, "\n");
 	}
+	fclose(fp);
+	fclose(fp_psm);
 
 	//// END WORKING
 
