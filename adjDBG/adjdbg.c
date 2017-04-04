@@ -121,6 +121,20 @@ int main (int argc, const char * argv[]) {
 	timeinfo = localtime ( &rawtime );
 	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 	fprintf(stdout, "Starting with PID %d\n", pid);
+	fprintf(stdout, "                  @params k %d\n", k);
+	fprintf(stdout, "                  @params l %d\n", l);
+	fprintf(stdout, "                  @params format %s\n", format);
+	fprintf(stdout, "                  @params input %s\n", control_file);
+	fprintf(stdout, "                  @params experiment %s\n", input_file);
+	if(c) {
+		fprintf(stdout, "                  @output approximate count\n");
+	}
+	if(psm_arg) {
+		fprintf(stdout, "                  @output psm\n");
+	}
+	if(g) {
+		fprintf(stdout, "                  @output graph\n");
+	}
 
 	//// BUILD EMPTY GRAPH
 	double nodes = pow((double)4, (double)(k/2));
