@@ -8,6 +8,7 @@
 #include "data_structures.h"
 #include "../utilities/my_lib.h"
 #include "../utilities/FIFO.h"
+#include "../utilities/argparse.h"
 
 #ifdef SILENT
 	#define printf(...)
@@ -28,7 +29,14 @@
 #define FASTA 1
 #define FASTQ 2
 
-#define MAX_SUBS 2 //TODO as arg
+#define MAX_SUBS 2
+
+// ARGUMENTS
+static const char* const usage[] = {
+	"adjdbg [options] -f fatsa|fastq -i input_file -e experiment_file",
+	NULL
+};
+
 
 ///////// FUNCTIONS PROTOTYPES
 
@@ -39,77 +47,65 @@ node_t * get_successor(node_t *, int, char);
 int get_base_index(char);
 
 
-int main (int argc, char * argv[]) {
+int main (int argc, const char * argv[]) {
+
+	int k = K;
+	int l = L;
+	char * format = NULL;
+	int input_format = 0;
+	const char * input_file = NULL;
+	const char * control_file = NULL;
+	int c = 0;
+	char out_file[BUFFER+1];
+	int psm_arg = 0;
+	int g = 0;
+
+	struct argparse_option options[] = {
+		OPT_HELP(),
+		OPT_GROUP("Mandatory"),
+		OPT_STRING('f', "format", &format, "format of files to read"),
+		OPT_STRING('i', "input", &control_file, "Input file (Control)"),
+		OPT_STRING('e', "experiment", &input_file, "Experiment file"),
+		OPT_GROUP("Optional"),
+		OPT_INTEGER('k', "kmer", &k, "kmer length (default 10)"),
+		OPT_INTEGER('l', "length", &l, "reads length (default 34)"),
+		OPT_BOOLEAN('c', "count", &c, "output approximate count ext='.approx.cnt'"),
+		OPT_BOOLEAN('m', "psm", &psm_arg, "output Position Specific Matrix ext='.psm'"),
+		OPT_BOOLEAN('g', "graph", &g, "output graph (of experiment) ext='.graph'"),
+		OPT_END()
+	};
+
+	struct argparse argparse;
+	argparse_init(&argparse, options, usage, 0);
+	argparse_describe(&argparse, "\nBuilds a De Bruijn graph on k/2-mer, then maps input and experiment on the graph. Calculate approximate count and Position Specific Matrix.", "\nOutput files are names as experiment_file.k#.specific_extension");
+	if(argc < MIN_ARGS) {
+		argparse_usage(&argparse);
+		return 0;
+	}
+	argc = argparse_parse(&argparse, argc, argv);
+
+	if(strcmp(format, "fasta") == 0)
+		input_format = FASTA;
+	else if(strcmp(format, "fastq") == 0)
+		input_format = FASTQ;
+
+	if(!input_format) {
+		fprintf(stdout, "[ERROR] format is mandatory\n");
+		argparse_usage(&argparse);
+		return 0;
+	}
+
+	if(!input_file || !control_file) {
+		fprintf(stdout, "[ERROR] -i input_file and -e experiment_file should be specified\n");
+		argparse_usage(&argparse);
+		return 0;
+	}
+
 	int pid = getpid();
 	time_t rawtime;
 	struct tm * timeinfo;
 
-	int k = K;
-	int l = L;
-	int o = 0;
-	//// BEGIN - PARSING ARGS
-	int input_format = 0;
-	int l_arg = L_ARG;
-	int o_arg = O_ARG;
-	int c_file = C_FILE;
-	int in_file = IN_FILE;
-	char input_file[BUFFER+1];
-	char control_file[BUFFER+1];
-	char out_file[BUFFER+1];
-	char psm_file[BUFFER+1];
-	char graph_file[BUFFER+1];
-	argc -= 1;
-	if (argc < MIN_ARGS) {
-		fprintf(stdout, "Usage: (--fasta|--fastq) [-k K] [-l L] [-o] control_file_no_ext input_file_no_ext\n\n");
-		fprintf(stdout, "\t--fasta | --fastq file format\n");
-		fprintf(stdout, "\t-k K: length of k-mer (graph built on k/2-mer), default %d\n", K);
-		fprintf(stdout, "\t-l L: length of the reads in the input file, default %d\n", L);
-		fprintf(stdout, "\t-o outputs the graph in a file named input_file_no_ext.graph\n");
-		return 1;
-	} else {
-		if ( strcmp(argv[K_ARG], "-k") == 0 ) {
-			k = atoi(argv[K_ARG + 1]);
-		} else {
-			in_file -= 2;
-			l_arg -= 2;
-			o_arg -= 2;
-			c_file -= 2;
-		}
-		if ( strcmp(argv[l_arg], "-l") == 0 ){
-			l = atoi(argv[l_arg + 1]);
-		} else {
-			in_file -= 2;
-			o_arg -= 2;
-			c_file -= 2;
-		}
-		if ( strcmp(argv[o_arg], "-o") == 0 ){
-			o = 1;
-		} else {
-			in_file -= 1;
-			c_file -= 1;
-		}
-		strncpy(control_file, argv[c_file], BUFFER);
-		strncpy(input_file, argv[in_file], BUFFER);
-		strncpy(out_file, input_file, BUFFER);
-		strcat(out_file, ".approx.cnt");
-		strncpy(psm_file, input_file, BUFFER);
-		strcat(psm_file, ".psm");
-		strncpy(graph_file, input_file, BUFFER);
-		strcat(graph_file, ".graph");
-		if (strcmp("--fasta", argv[IN_FORMAT]) == 0) {
-			input_format = FASTA;
-			strcat(input_file, ".fa");
-			strcat(control_file, ".fa");
-		} else if (strcmp("--fastq", argv[IN_FORMAT]) ==  0) {
-			input_format = FASTQ;
-			strcat(input_file, ".fastq");
-			strcat(control_file, ".fastq");
-		} else {
-			fprintf(stdout, "Usage: (--fasta|--fastq) [-k K (default 34)] [-o] control_file_no_ext input_file_no_ext\n");
-			return 1;
-		}
-	}
-	//// END - PARSING ARGS
+
 
 	//// -----------------------
 	int i, j;
@@ -409,70 +405,95 @@ int main (int argc, char * argv[]) {
 	fprintf(stdout, "Counting ended\n");
 	fprintf(stdout, "                  Counted %lu total k-mer for IP\n", total);
 	fprintf(stdout, "                  Counted %lu total k-mer for Input\n", total_input);
-	fprintf(stdout, "                  Generating output\n");
 
 	//// OUTPUT
-	if( !(fp = fopen(out_file, "w+")) ) {
-		fprintf(stdout, "[ERROR] can't open %s\n", out_file);
-		return 1;
+	if(c) {
+		time ( &rawtime );
+		timeinfo = localtime ( &rawtime );
+		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
+		fprintf(stdout, "Generating output: count\n");
+		strncpy(out_file, input_file, BUFFER);
+		sprintf(buf, ".k%d", k);
+		strcat(out_file, buf);
+		strcat(out_file, ".approx.cnt");
+		if( !(fp = fopen(out_file, "w+")) ) {
+			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
+			return 1;
+		}
+		double freq;
+		double freq_input;
+		double diff;
+		double diff_log2;
+
+		fprintf(fp, "k-mer\tIP_count\tIP_freq\tInput_count\tInput_freq\tdiff\tdiff_log2\n");
+		for(i=0; i<nodes*nodes; i++) {
+			rev_hash(i, k, reference);
+			freq = (double)counts[i]/(double)total;
+			freq_input = (double)counts_input[i]/(double)total_input;
+			diff = freq/freq_input;
+			diff_log2 = log2(diff);
+			fprintf(fp, "%s\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\n", reference, counts[i], freq, counts_input[i], freq_input, diff, diff_log2);
+		}
+		fclose(fp);
 	}
-	FILE * fp_psm;
-	if( !(fp_psm = fopen(psm_file, "w+")) ) {
-		fprintf(stdout, "[ERROR] can't open %s\n", out_file);
-		return 1;
+
+	if(psm_arg) {
+		time ( &rawtime );
+		timeinfo = localtime ( &rawtime );
+		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
+		fprintf(stdout, "Generating output: position specific matrix\n");
+		FILE * fp_psm;
+		strncpy(out_file, input_file, BUFFER);
+		sprintf(buf, ".k%d", k);
+		strcat(out_file, buf);
+		strcat(out_file, ".psm");
+		if( !(fp_psm = fopen(out_file, "w+")) ) {
+			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
+			return 1;
+		}
+		for(i=0; i<nodes*nodes; i++) {
+			rev_hash(i, k, reference);
+			fprintf(fp_psm, "%s\n", reference);
+			fprintf(fp_psm, "A");
+			for(j=0; j<k; j++) {
+				fprintf(fp_psm, "\t%d", psm[i][0][j]);
+			}
+			fprintf(fp_psm, "\n");
+			fprintf(fp_psm, "C");
+			for(j=0; j<k; j++) {
+				fprintf(fp_psm, "\t%d", psm[i][1][j]);
+			}
+			fprintf(fp_psm, "\n");
+			fprintf(fp_psm, "G");
+			for(j=0; j<k; j++) {
+				fprintf(fp_psm, "\t%d", psm[i][2][j]);
+			}
+			fprintf(fp_psm, "\n");
+			fprintf(fp_psm, "T");
+			for(j=0; j<k; j++) {
+				fprintf(fp_psm, "\t%d", psm[i][3][j]);
+			}
+			fprintf(fp_psm, "\n");
+		}
+		fclose(fp_psm);
 	}
 
-	double freq;
-	double freq_input;
-	double diff;
-	double diff_log2;
 
-	fprintf(fp, "k-mer\tIP_count\tIP_freq\tInput_count\tInput_freq\tdiff\tdiff_log2\n");
-	for(i=0; i<nodes*nodes; i++) {
-		rev_hash(i, k, reference);
-		freq = (double)counts[i]/(double)total;
-		freq_input = (double)counts_input[i]/(double)total_input;
-		diff = freq/freq_input;
-		diff_log2 = log2(diff);
-		fprintf(fp, "%s\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\n", reference, counts[i], freq, counts_input[i], freq_input, diff, diff_log2);
-
-
-
-		fprintf(fp_psm, "%s\n", reference);
-		fprintf(fp_psm, "A");
-		for(j=0; j<k; j++) {
-			fprintf(fp_psm, "\t%d", psm[i][0][j]);
-		}
-		fprintf(fp_psm, "\n");
-		fprintf(fp_psm, "C");
-		for(j=0; j<k; j++) {
-			fprintf(fp_psm, "\t%d", psm[i][1][j]);
-		}
-		fprintf(fp_psm, "\n");
-		fprintf(fp_psm, "G");
-		for(j=0; j<k; j++) {
-			fprintf(fp_psm, "\t%d", psm[i][2][j]);
-		}
-		fprintf(fp_psm, "\n");
-		fprintf(fp_psm, "T");
-		for(j=0; j<k; j++) {
-			fprintf(fp_psm, "\t%d", psm[i][3][j]);
-		}
-		fprintf(fp_psm, "\n");
-	}
-	fclose(fp);
-	fclose(fp_psm);
 
 	//// END WORKING
 
 
-	if(o) {
+	if(g) {
 		//// OUTPUT
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Generating output: graph\n");
-		if( !(fp = fopen(graph_file, "w+")) ) {
+		strncpy(out_file, input_file, BUFFER);
+		sprintf(buf, ".k%d", k);
+		strcat(out_file, buf);
+		strcat(out_file, ".graph");
+		if( !(fp = fopen(out_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
 			return 1;
 		}
@@ -498,17 +519,15 @@ int main (int argc, char * argv[]) {
 			fprintf(fp, "\n");
 		}
 		fclose(fp);
-		time ( &rawtime );
-		timeinfo = localtime ( &rawtime );
-		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
-		fprintf(stdout, "Output generated\n");
 	}
 
-
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
+	fprintf(stdout, "Completed\n");
 
 	return 0;
 }
-
 
 
 
