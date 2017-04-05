@@ -572,25 +572,9 @@ int main (int argc, const char * argv[]) {
 			return 1;
 		}
 		strcpy(out_file, path);
-		strcat(out_file, ".edges.in");
-		FILE * fp_edges_in;
-		if( !(fp_edges_in = fopen(out_file, "w+")) ) {
-			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
-			return 1;
-		}
-		strcpy(out_file, path);
 		strcat(out_file, ".edges.out");
 		FILE * fp_edges_out;
 		if( !(fp_edges_out = fopen(out_file, "w+")) ) {
-			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
-			return 1;
-		}
-		strcpy(out_file, path);
-		strcat(out_file, ".edges.in");
-		sprintf(buf, ".%dstep", k/2);
-		strcat(out_file, buf);
-		FILE * fp_edges_in_k;
-		if( !(fp_edges_in_k = fopen(out_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
 			return 1;
 		}
@@ -604,31 +588,21 @@ int main (int argc, const char * argv[]) {
 			return 1;
 		}
 		fprintf(fp_nodes, "ID\tseq\n");
-		fprintf(fp_edges_in, "From\tTo\n");
-		fprintf(fp_edges_out, "From\tTo\n");
-		fprintf(fp_edges_in_k, "From\tTo\tCount\tInput_count\n");
-		fprintf(fp_edges_out_k, "From\tTo\tCount\tInput_count\n");
+		fprintf(fp_edges_out, "ID\tFrom\tTo\n");
+		fprintf(fp_edges_out_k, "ID\tFrom\tTo\tCount\tInput_count\n");
 		for(i=0; i<nodes; i++) {
 			fprintf(fp_nodes, "%d\t%s\n", i, dbg->nodes[i]->seq);
 
 			for(j=0; j<4; j++) {
-				fprintf(fp_edges_in, "%s\t%s\n", dbg->nodes[i]->in[j]->from->seq, dbg->nodes[i]->seq);
-			}
-			for(j=0; j<4; j++) {
-				fprintf(fp_edges_out, "%s\t%s\n", dbg->nodes[i]->seq, dbg->nodes[i]->out[j]->to->seq);
+				fprintf(fp_edges_out, "%d\t%s\t%s\n", dbg->nodes[i]->out[j]->id, dbg->nodes[i]->seq, dbg->nodes[i]->out[j]->to->seq);
 			}
 
 			for(j=0; j<nodes; j++) {
-				fprintf(fp_edges_in_k, "%s\t%s\t%d\t%d\n", dbg->nodes[i]->in_kstep[j]->from->seq, dbg->nodes[i]->seq, dbg->nodes[i]->in_kstep[j]->count, dbg->nodes[i]->in_kstep[j]->input_count);
-			}
-			for(j=0; j<nodes; j++) {
-				fprintf(fp_edges_out_k, "%s\t%s\t%d\t%d\n", dbg->nodes[i]->seq, dbg->nodes[i]->out_kstep[j]->to->seq, dbg->nodes[i]->out_kstep[j]->count, dbg->nodes[i]->out_kstep[j]->input_count);
+				fprintf(fp_edges_out_k, "%d\t%s\t%s\t%d\t%d\n", dbg->nodes[i]->out_kstep[j]->id, dbg->nodes[i]->seq, dbg->nodes[i]->out_kstep[j]->to->seq, dbg->nodes[i]->out_kstep[j]->count, dbg->nodes[i]->out_kstep[j]->input_count);
 			}
 		}
 		fclose(fp_nodes);
-		fclose(fp_edges_in);
 		fclose(fp_edges_out);
-		fclose(fp_edges_in_k);
 		fclose(fp_edges_out_k);
 	}
 
@@ -757,6 +731,11 @@ graph_t * build_graph(double nodes, double edges, int k) {
 			return NULL;
 		}
 	}
+	char * support;
+	if ( !(support = (char*)malloc(sizeof(char) * (2*k+1))) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate memory\n");
+		return NULL;
+	}
 
 	node_t * n;
 
@@ -792,7 +771,9 @@ graph_t * build_graph(double nodes, double edges, int k) {
 	//Create k/2-step edges
 	for (i=0; i<nodes; i++) {
 		for(j=0; j<nodes; j++) {
-			if( !(e = create_edge(dbg->nodes[i], dbg->nodes[j], i)) ) {
+			strcpy(support, dbg->nodes[i]->seq);
+			strcat(support, dbg->nodes[j]->seq);
+			if( !(e = create_edge(dbg->nodes[i], dbg->nodes[j], hash(support, k*2) )) ) {
 				fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 				return NULL;
 			}
