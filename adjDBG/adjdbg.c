@@ -370,7 +370,6 @@ int main (int argc, const char * argv[]) {
 		reverse_kmer(kmer, revkmer, k/2);
 		/*
 			TODO
-			Missing palyndrome check
 			Missing PSM update
 		*/
 
@@ -557,41 +556,80 @@ int main (int argc, const char * argv[]) {
 	}
 
 	if(g) {
-		//// OUTPUT
+		char path[BUFFER+1];
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Generating output: graph\n");
-		strncpy(out_file, input_file, BUFFER);
-		sprintf(buf, ".k%d", k);
-		strcat(out_file, buf);
-		strcat(out_file, ".graph");
-		if( !(fp = fopen(out_file, "w+")) ) {
+		strcpy(path, input_file);
+		sprintf(buf, ".k%d.graph", k);
+		strcat(path, buf);
+		strcpy(out_file, path);
+		strcat(out_file, ".nodes");
+		FILE * fp_nodes;
+		if( !(fp_nodes = fopen(out_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
 			return 1;
 		}
-		fprintf(fp, "node\tin_nodes\tout_nodes\tin_nodes_kstep(node:count-input_count)\tout_nodes_kstep(node:count-input_count)\n");
-		for(i=0; i<nodes; i++) {
-			fprintf(fp, "%s", dbg->nodes[i]->seq);
-			fprintf(fp, "\t%s", dbg->nodes[i]->in[0]->from->seq);
-			for(j=1; j<4; j++) {
-				fprintf(fp, ";%s", dbg->nodes[i]->in[j]->from->seq);
-			}
-			fprintf(fp, "\t%s", dbg->nodes[i]->out[0]->to->seq);
-			for(j=1; j<4; j++) {
-				fprintf(fp, ";%s", dbg->nodes[i]->out[j]->to->seq);
-			}
-			fprintf(fp, "\t%s:%d-%d", dbg->nodes[i]->in_kstep[0]->from->seq, dbg->nodes[i]->in_kstep[0]->count, dbg->nodes[i]->in_kstep[0]->input_count);
-			for(j=1; j<nodes; j++) {
-				fprintf(fp, ";%s:%d-%d", dbg->nodes[i]->in_kstep[j]->from->seq, dbg->nodes[i]->in_kstep[j]->count, dbg->nodes[i]->in_kstep[j]->input_count);
-			}
-			fprintf(fp, "\t%s:%d-%d", dbg->nodes[i]->out_kstep[0]->to->seq, dbg->nodes[i]->out_kstep[0]->count, dbg->nodes[i]->out_kstep[0]->input_count);
-			for(j=1; j<nodes; j++) {
-				fprintf(fp, ";%s:%d-%d", dbg->nodes[i]->out_kstep[j]->to->seq, dbg->nodes[i]->out_kstep[j]->count, dbg->nodes[i]->out_kstep[j]->input_count);
-			}
-			fprintf(fp, "\n");
+		strcpy(out_file, path);
+		strcat(out_file, ".edges.in");
+		FILE * fp_edges_in;
+		if( !(fp_edges_in = fopen(out_file, "w+")) ) {
+			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
+			return 1;
 		}
-		fclose(fp);
+		strcpy(out_file, path);
+		strcat(out_file, ".edges.out");
+		FILE * fp_edges_out;
+		if( !(fp_edges_out = fopen(out_file, "w+")) ) {
+			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
+			return 1;
+		}
+		strcpy(out_file, path);
+		strcat(out_file, ".edges.in");
+		sprintf(buf, ".%dstep", k/2);
+		strcat(out_file, buf);
+		FILE * fp_edges_in_k;
+		if( !(fp_edges_in_k = fopen(out_file, "w+")) ) {
+			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
+			return 1;
+		}
+		strcpy(out_file, path);
+		strcat(out_file, ".edges.out");
+		sprintf(buf, ".%dstep", k/2);
+		strcat(out_file, buf);
+		FILE * fp_edges_out_k;
+		if( !(fp_edges_out_k = fopen(out_file, "w+")) ) {
+			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
+			return 1;
+		}
+		fprintf(fp_nodes, "ID\tseq\n");
+		fprintf(fp_edges_in, "From\tTo\n");
+		fprintf(fp_edges_out, "From\tTo\n");
+		fprintf(fp_edges_in_k, "From\tTo\tCount\tInput_count\n");
+		fprintf(fp_edges_out_k, "From\tTo\tCount\tInput_count\n");
+		for(i=0; i<nodes; i++) {
+			fprintf(fp_nodes, "%d\t%s\n", i, dbg->nodes[i]->seq);
+
+			for(j=0; j<4; j++) {
+				fprintf(fp_edges_in, "%s\t%s\n", dbg->nodes[i]->in[j]->from->seq, dbg->nodes[i]->seq);
+			}
+			for(j=0; j<4; j++) {
+				fprintf(fp_edges_out, "%s\t%s\n", dbg->nodes[i]->seq, dbg->nodes[i]->out[j]->to->seq);
+			}
+
+			for(j=0; j<nodes; j++) {
+				fprintf(fp_edges_in_k, "%s\t%s\t%d\t%d\n", dbg->nodes[i]->in_kstep[j]->from->seq, dbg->nodes[i]->seq, dbg->nodes[i]->in_kstep[j]->count, dbg->nodes[i]->in_kstep[j]->input_count);
+			}
+			for(j=0; j<nodes; j++) {
+				fprintf(fp_edges_out_k, "%s\t%s\t%d\t%d\n", dbg->nodes[i]->seq, dbg->nodes[i]->out_kstep[j]->to->seq, dbg->nodes[i]->out_kstep[j]->count, dbg->nodes[i]->out_kstep[j]->input_count);
+			}
+		}
+		fclose(fp_nodes);
+		fclose(fp_edges_in);
+		fclose(fp_edges_out);
+		fclose(fp_edges_in_k);
+		fclose(fp_edges_out_k);
 	}
 
 	time ( &rawtime );
