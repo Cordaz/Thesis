@@ -91,7 +91,7 @@ void reverse_kmer(char * kmer, char * rev, int k) {
 				c = 'A';
 				break;
 			default:
-				c = '\0'; //Used to eventually return error further in the processing, should not happen (otherwise it will be shorter)
+				c = 'N';
 		}
 		rev[i] = c;
 	}
@@ -100,7 +100,7 @@ void reverse_kmer(char * kmer, char * rev, int k) {
 
 
 int is_palyndrome(char * kmer, char * rev) {
-	return !strcmp(kmer, rev);
+	return strcmp(kmer, rev) == 0 ? 1 : 0;
 }
 
 

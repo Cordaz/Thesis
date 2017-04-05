@@ -284,9 +284,24 @@ int main (int argc, const char * argv[]) {
 	}
 
 	char * kmer;
+	char * revkmer;
+	if( !(revkmer = (char*)malloc(sizeof(char)*(k/2+1))) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
 	char * adjkmer;
+	char * adjrevkmer;
+	if( !(adjrevkmer = (char*)malloc(sizeof(char)*(k/2+1))) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
 	char * reference;
 	if( !(reference = (char*)malloc(sizeof(char)*(k+1))) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+	char * revreference;
+	if( !(revreference = (char*)malloc(sizeof(char)*(k+1))) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
@@ -295,7 +310,13 @@ int main (int argc, const char * argv[]) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
+	char * revsupport;
+	if( !(revsupport = (char*)malloc(sizeof(char)*(k+1))) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
 	node_t * substituted_node;
+	node_t * rev_substituted_node;
 	int h, m, x;
 	unsigned long * counts;
 	if( !(counts = (unsigned long*)malloc(sizeof(unsigned long) * nodes * nodes)) ) {
@@ -313,8 +334,11 @@ int main (int argc, const char * argv[]) {
 	unsigned long total_input = 0;
 
 	int subhash;
+	int revsubhash;
 	int adjhash;
+	int revadjhash;
 	int fullhash;
+	int revhash;
 
 
 	//// Matrix for position specific count
@@ -343,7 +367,12 @@ int main (int argc, const char * argv[]) {
 	for(i=0; i<nodes; i++) {
 		kmer = dbg->nodes[i]->seq;
 		substitute_all(kmer, substituted, k/2);
-
+		reverse_kmer(kmer, revkmer, k/2);
+		/*
+			TODO
+			Missing palyndrome check
+			Missing PSM update
+		*/
 
 		for(m=0; m<nodes; m++) {
 			strcpy(reference, kmer);
@@ -351,29 +380,48 @@ int main (int argc, const char * argv[]) {
 			strcat(reference, adjkmer); //Reference k-mer
 			count = (unsigned long)1; //Pseudo-count
 			count_input = (unsigned long)1; //Pseudo-count
+			reverse_kmer(adjkmer, adjrevkmer, k/2);
+			strcpy(revreference, revkmer);
+			strcat(revreference, adjrevkmer);
+
 			fullhash = hash(reference, k);
 			adjhash = hash(adjkmer, k/2);
 			count += (unsigned long)dbg->nodes[i]->out_kstep[adjhash]->count;
 			count_input += (unsigned long)dbg->nodes[i]->out_kstep[adjhash]->input_count;
 
-			if( dbg->nodes[i]->out_kstep[adjhash]->count != 0 ) {
-				for(j=0; j<k; j++) {
-					psm[fullhash][get_base_index(reference[j])][j] += dbg->nodes[i]->out_kstep[adjhash]->count;
-				}
+			revhash = hash(revkmer, k/2);
+			revadjhash = hash(adjrevkmer, k/2);
+			if(!is_palyndrome(reference, revreference)) {
+				count += (unsigned long)dbg->nodes[revhash]->out_kstep[revadjhash]->count;
+				count_input += (unsigned long)dbg->nodes[revhash]->out_kstep[revadjhash]->input_count;
+			}
+
+			for(j=0; j<k; j++) {
+				psm[fullhash][get_base_index(reference[j])][j] += dbg->nodes[i]->out_kstep[adjhash]->count;
 			}
 			substitute_all(adjkmer, substituted_adj, k/2); //All substitution of second half
 
 			//Iterate over substitution
 			for(j=0; j<expected_sub; j++) {
 				substituted_node = dbg->nodes[hash(substituted[j], k/2)];
+				reverse_kmer(substituted_node->seq, revkmer, k/2);
+				rev_substituted_node = dbg->nodes[hash(revkmer, k/2)];
 
 				//Iterate over adjacent k-mer
 				count += (unsigned long)substituted_node->out_kstep[adjhash]->count;
 				count_input += (unsigned long)substituted_node->out_kstep[adjhash]->input_count;
+				strcpy(support, substituted[j]);
+				strcat(support, adjkmer);
+				strcpy(revsupport, revkmer);
+				strcat(revsupport, adjrevkmer);
+				if(!is_palyndrome(support, revsupport)) {
+					count += (unsigned long)rev_substituted_node->out_kstep[revadjhash]->count;
+					count_input += (unsigned long)rev_substituted_node->out_kstep[revadjhash]->input_count;
+				}
+
 				if( substituted_node->out_kstep[adjhash]->count != 0 ) {
 					strcpy(support, substituted[j]);
 					strcat(support, adjkmer);
-					//fullhash = hash(support, k);
 					for(h=0; h<k; h++) {
 						psm[fullhash][get_base_index(support[h])][h] += substituted_node->out_kstep[adjhash]->count;
 					}
@@ -383,13 +431,21 @@ int main (int argc, const char * argv[]) {
 					subhash = hash(substituted_adj[h], k/2);
 					count += (unsigned long)substituted_node->out_kstep[subhash]->count;
 					count_input += (unsigned long)substituted_node->out_kstep[subhash]->input_count;
-					if( substituted_node->out_kstep[subhash]->count != 0 ) {
-						strcpy(support, substituted[j]);
-						strcat(support, substituted_adj[h]);
-						//fullhash = hash(support, k);
-						for(x=0; x<k; x++) {
-							psm[fullhash][get_base_index(support[x])][x] += substituted_node->out_kstep[subhash]->count;
-						}
+
+					reverse_kmer(dbg->nodes[subhash]->seq, adjrevkmer, k/2);
+					revsubhash = hash(revkmer, k/2);
+					strcpy(support, substituted[j]);
+					strcat(support, substituted_adj[h]);
+					reverse_kmer(substituted[j], revkmer, k/2);
+					strcpy(revsupport, revkmer);
+					strcat(revsupport, adjrevkmer);
+					if(!is_palyndrome(support, revsupport)) {
+						count += (unsigned long)rev_substituted_node->out_kstep[revsubhash]->count;
+						count_input += (unsigned long)rev_substituted_node->out_kstep[revsubhash]->input_count;
+					}
+
+					for(x=0; x<k; x++) {
+						psm[fullhash][get_base_index(support[x])][x] += substituted_node->out_kstep[subhash]->count;
 					}
 				}
 			}
@@ -398,13 +454,21 @@ int main (int argc, const char * argv[]) {
 				subhash = hash(substituted_adj[h], k/2);
 				count += (unsigned long)dbg->nodes[i]->out_kstep[subhash]->count;
 				count_input += (unsigned long)dbg->nodes[i]->out_kstep[subhash]->input_count;
-				if( dbg->nodes[i]->out_kstep[subhash]->count != 0 ) {
-					strcpy(support, kmer);
-					strcat(support, substituted_adj[h]);
-					//fullhash = hash(support, k);
-					for(x=0; x<k; x++) {
-						psm[fullhash][get_base_index(support[x])][x] += dbg->nodes[i]->out_kstep[subhash]->count;
-					}
+
+				reverse_kmer(dbg->nodes[subhash]->seq, adjrevkmer, k/2);
+				revsubhash = hash(adjrevkmer, k/2);
+				reverse_kmer(kmer, revkmer, k/2);
+				strcpy(support, kmer);
+				strcat(support, substituted_adj[h]);
+				strcpy(revsupport, revkmer);
+				strcat(revsupport, adjrevkmer);
+				if(!is_palyndrome(support, revsupport)) {
+					count += (unsigned long)dbg->nodes[revhash]->out_kstep[revsubhash]->count;
+					count_input += (unsigned long)dbg->nodes[revhash]->out_kstep[revsubhash]->input_count;
+				}
+
+				for(x=0; x<k; x++) {
+					psm[fullhash][get_base_index(support[x])][x] += dbg->nodes[i]->out_kstep[subhash]->count;
 				}
 			}
 			counts[hash(reference, k)] = count;
@@ -491,11 +555,6 @@ int main (int argc, const char * argv[]) {
 		}
 		fclose(fp_psm);
 	}
-
-
-
-	//// END WORKING
-
 
 	if(g) {
 		//// OUTPUT
