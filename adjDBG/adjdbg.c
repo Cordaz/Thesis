@@ -5,7 +5,7 @@
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
-#include "data_structures.h"
+#include "../utilities/data_structures.h"
 #include "../utilities/my_lib.h"
 #include "../utilities/FIFO.h"
 #include "../utilities/argparse.h"
