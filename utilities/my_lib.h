@@ -62,4 +62,11 @@
 	 */
 	void substitute_all(char * kmer, char ** substituted, int k);
 
+	/*
+	 * Returns the number corresponding to the base:
+	 * A->0, C->1, G->2, T->3, err -1
+	 *
+	 */
+	int get_base_index(char);
+
 #endif

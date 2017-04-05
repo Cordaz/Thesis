@@ -44,7 +44,6 @@ graph_t * build_graph(double, double, int);
 int map_read(char *, int, int, graph_t *, fifo_t *);
 int map_input_read(char *, int, int, graph_t *, fifo_t *);
 node_t * get_successor(node_t *, int, char);
-int get_base_index(char);
 
 
 int main (int argc, const char * argv[]) {
@@ -368,10 +367,6 @@ int main (int argc, const char * argv[]) {
 		kmer = dbg->nodes[i]->seq;
 		substitute_all(kmer, substituted, k/2);
 		reverse_kmer(kmer, revkmer, k/2);
-		/*
-			TODO
-			Missing PSM update
-		*/
 
 		for(m=0; m<nodes; m++) {
 			strcpy(reference, kmer);
@@ -393,6 +388,9 @@ int main (int argc, const char * argv[]) {
 			if(!is_palyndrome(reference, revreference)) {
 				count += (unsigned long)dbg->nodes[revhash]->out_kstep[revadjhash]->count;
 				count_input += (unsigned long)dbg->nodes[revhash]->out_kstep[revadjhash]->input_count;
+				for(j=0; j<k; j++) {
+					psm[fullhash][get_base_index(reference[j])][j] += dbg->nodes[revhash]->out_kstep[revadjhash]->count;
+				}
 			}
 
 			for(j=0; j<k; j++) {
@@ -416,14 +414,13 @@ int main (int argc, const char * argv[]) {
 				if(!is_palyndrome(support, revsupport)) {
 					count += (unsigned long)rev_substituted_node->out_kstep[revadjhash]->count;
 					count_input += (unsigned long)rev_substituted_node->out_kstep[revadjhash]->input_count;
+					for(h=0; h<k; h++) {
+						psm[fullhash][get_base_index(support[h])][h] += rev_substituted_node->out_kstep[revadjhash]->count;
+					}
 				}
 
-				if( substituted_node->out_kstep[adjhash]->count != 0 ) {
-					strcpy(support, substituted[j]);
-					strcat(support, adjkmer);
-					for(h=0; h<k; h++) {
-						psm[fullhash][get_base_index(support[h])][h] += substituted_node->out_kstep[adjhash]->count;
-					}
+				for(h=0; h<k; h++) {
+					psm[fullhash][get_base_index(support[h])][h] += substituted_node->out_kstep[adjhash]->count;
 				}
 
 				for(h=0; h<expected_sub; h++) {
@@ -441,6 +438,9 @@ int main (int argc, const char * argv[]) {
 					if(!is_palyndrome(support, revsupport)) {
 						count += (unsigned long)rev_substituted_node->out_kstep[revsubhash]->count;
 						count_input += (unsigned long)rev_substituted_node->out_kstep[revsubhash]->input_count;
+						for(x=0; x<k; x++) {
+							psm[fullhash][get_base_index(support[x])][x] += rev_substituted_node->out_kstep[revsubhash]->count;
+						}
 					}
 
 					for(x=0; x<k; x++) {
@@ -449,6 +449,7 @@ int main (int argc, const char * argv[]) {
 				}
 			}
 			//Missing counts: first half fixed, second half substituted
+			reverse_kmer(kmer, revkmer, k/2);
 			for(h=0; h<expected_sub; h++) {
 				subhash = hash(substituted_adj[h], k/2);
 				count += (unsigned long)dbg->nodes[i]->out_kstep[subhash]->count;
@@ -456,7 +457,6 @@ int main (int argc, const char * argv[]) {
 
 				reverse_kmer(dbg->nodes[subhash]->seq, adjrevkmer, k/2);
 				revsubhash = hash(adjrevkmer, k/2);
-				reverse_kmer(kmer, revkmer, k/2);
 				strcpy(support, kmer);
 				strcat(support, substituted_adj[h]);
 				strcpy(revsupport, revkmer);
@@ -464,6 +464,9 @@ int main (int argc, const char * argv[]) {
 				if(!is_palyndrome(support, revsupport)) {
 					count += (unsigned long)dbg->nodes[revhash]->out_kstep[revsubhash]->count;
 					count_input += (unsigned long)dbg->nodes[revhash]->out_kstep[revsubhash]->input_count;
+					for(x=0; x<k; x++) {
+						psm[fullhash][get_base_index(support[x])][x] += dbg->nodes[revhash]->out_kstep[revsubhash]->count;
+					}
 				}
 
 				for(x=0; x<k; x++) {
@@ -675,7 +678,6 @@ int map_input_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 	return 0;
 }
 
-
 node_t * get_successor(node_t * n, int k, char c) {
 	int i;
 	for(i=0; i<4; i++) {
@@ -684,23 +686,6 @@ node_t * get_successor(node_t * n, int k, char c) {
 	}
 	return NULL;
 }
-
-
-int get_base_index(char b) {
-	switch(b) {
-		case 'A':
-			return 0;
-		case 'C':
-			return 1;
-		case 'G':
-			return 2;
-		case 'T':
-			return 3;
-		default:
-			return -1;
-	}
-}
-
 
 graph_t * build_graph(double nodes, double edges, int k) {
 	int i, j;

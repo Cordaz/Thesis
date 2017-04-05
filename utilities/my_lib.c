@@ -156,3 +156,19 @@ void substitute_all(char * kmer, char ** substituted, int k) {
 		}
 	}
 }
+
+
+int get_base_index(char b) {
+	switch(b) {
+		case 'A':
+			return 0;
+		case 'C':
+			return 1;
+		case 'G':
+			return 2;
+		case 'T':
+			return 3;
+		default:
+			return -1;
+	}
+}

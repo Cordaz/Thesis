@@ -23,7 +23,6 @@ static const char* const usage[] = {
 };
 
 graph_t * load_graph(const char *, int, int, int);
-int get_base_index(char);
 
 int main(int argc, const char * argv[]) {
 	//Setup
@@ -70,6 +69,9 @@ int main(int argc, const char * argv[]) {
 	timeinfo = localtime ( &rawtime );
 	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 	fprintf(stdout, "Starting with PID %d\n", pid);
+	fprintf(stdout, "                  @params s %d\n", s);
+	fprintf(stdout, "                  @params pattern %s\n", pattern);
+	fprintf(stdout, "                  @params k %d\n", k);
 
 	int nodes = (int)pow((double)4, k/2);
 	int edges = (int)pow((double)4, k/2+1);
@@ -83,7 +85,7 @@ int main(int argc, const char * argv[]) {
 	fprintf(stdout, "Loaded graph in memory\n");
 
 
-	
+
 
 
 	return 0;
@@ -239,20 +241,4 @@ graph_t * load_graph(const char * pattern, int k, int nodes, int edges) {
 	fclose(fp);
 
 	return dbg;
-}
-
-
-int get_base_index(char b) {
-	switch(b) {
-		case 'A':
-			return 0;
-		case 'C':
-			return 1;
-		case 'G':
-			return 2;
-		case 'T':
-			return 3;
-		default:
-			return -1;
-	}
 }
