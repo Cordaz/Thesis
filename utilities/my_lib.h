@@ -1,7 +1,7 @@
 #ifndef MYLIB_H
 	#define MYLIB_H
 
-	#include "set.h"
+	#include "numeric_set.h"
 
 	/*
 	 * Hash the string (of length passed after) passed as argument as:
@@ -65,13 +65,9 @@
 	void substitute_all(char *, char **, int);
 
 
-	set_t * substitute_one(set_t *, char *, int);
-
-	/*
 	numeric_set_t * substitute_one_hash(numeric_set_t *, int, int, int *);
 
 	int * init_positional_masks(int);
-	*/
 
 
 	/*

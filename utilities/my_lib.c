@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <math.h>
-#include "set.h"
+#include "numeric_set.h"
 
 const char bases[4] = {'A', 'C', 'G', 'T'};
 
@@ -161,26 +161,6 @@ void substitute_all(char * kmer, char ** substituted, int k) {
 }
 
 
-set_t * substitute_one(set_t * q, char * kmer, int k) {
-	int i, j;
-	char * support;
-	if( !(support = (char*)malloc(sizeof(char) * (k+1))) )
-		return NULL;
-	for(i=0; i<k; i++) {
-		strcpy(support, kmer);
-		for(j=0; j<4; j++) {
-			support[i] = bases[j];
-			if( !is_in(q, support) )
-				put(q, support);
-		}
-	}
-
-	free(support);
-
-	return q;
-}
-
-/*
 numeric_set_t * substitute_one_hash(numeric_set_t * set, int hash, int k, int * positional_masks) {
 	int i, j;
 	int t;
@@ -208,7 +188,6 @@ int * init_positional_masks(int k) {
 
 	return ms;
 }
-*/
 
 
 

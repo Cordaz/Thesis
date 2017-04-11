@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include "../utilities/data_structures.h"
 #include "../utilities/my_lib.h"
-#include "../utilities/set.h"
+#include "../utilities/numeric_set.h"
 #include "../utilities/FIFO.h"
 #include "../utilities/argparse.h"
 
@@ -32,7 +32,7 @@ static const char* const usage[] = {
 };
 
 graph_t * load_graph(const char *, int, int, int);
-set_t * extend_right(set_t *, char *, int, int);
+numeric_set_t * extend_right_hash(numeric_set_t *, int, int);
 
 graph_t * build_graph(double, double, int);
 int map_read(char *, int, int, graph_t *, fifo_t *);
@@ -393,21 +393,21 @@ int main(int argc, const char * argv[]) {
 	}
 
 	int q_len = (int)pow( (double)4, k-s );
-	set_t * q;
-	if( !(q = initialize_set(q_len, k)) ) {
+	numeric_set_t * q;
+	if( !(q = initialize_set(q_len)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
 
 	int dim = 1 + 3*s;
-	set_t * one;
-	if( !(one = initialize_set(dim, s)) ) {
+	numeric_set_t * one;
+	if( !(one = initialize_set(dim)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
 	dim = dim + 3*s/2 * 3*(s-1);
-	set_t * two;
-	if( !(two = initialize_set(dim, s)) ) {
+	numeric_set_t * two;
+	if( !(two = initialize_set(dim)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
@@ -433,46 +433,30 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
-	char * smer;
-	if( !(smer = (char*)malloc(sizeof(char)*(s+1))) ) {
-		fprintf(stdout, "[ERROR] couldn't allocate\n");
-		return 1;
-	}
+	int hash_kmer;
+	int hash_smer;
 
-	char * rev_smer;
-	if( !(rev_smer = (char*)malloc(sizeof(char)*(s+1))) ) {
-		fprintf(stdout, "[ERROR] couldn't allocate\n");
-		return 1;
-	}
-
-	char * half0, * half1;
-	if( !(half0 = (char*)malloc(sizeof(char) * (k/2+1))) ) {
-		fprintf(stdout, "[ERROR] couldn't allocate\n");
-		return 1;
-	}
-	if( !(half1 = (char*)malloc(sizeof(char) * (k/2+1))) ) {
-		fprintf(stdout, "[ERROR] couldn't allocate\n");
-		return 1;
-	}
 	int hash_half0, hash_half1;
+	int half_mask = (int)pow((double) 2, k) - 1;
 
-	int p;
 	int flag;
 	int flag2;
+
+	int * positional_masks = init_positional_masks(k);
 
 	//Approximate counting and psm
 	for(i=0; i<expected_smer; i++) {
 		clear(one);
 		clear(two);
 		//printf("%s\n", smers[i]);
-		if( !(one = substitute_one(one, smers[i], s)) ) {
+		if( !(one = substitute_one_hash(one, i, s, positional_masks)) ) {
 			fprintf(stdout, "[ERROR] queue is not working\n");
 			return 1;
 		}
-		flag = get(one, smer);
+		flag = getInt(one, &hash_smer);
 		while( flag != -1 ) {
 			//printf("\t%s\n", smer);
-			two = substitute_one(two, smer, s);
+			two = substitute_one_hash(two, hash_smer, s, positional_masks);
 			/*
 			str_dequeue(two, kmer);
 			while( strcmp(kmer, "") ) {
@@ -480,73 +464,37 @@ int main(int argc, const char * argv[]) {
 				str_dequeue(two, kmer);
 			}
 			*/
-			flag = get(one, smer);
+			flag = getInt(one, &hash_smer);
 		}
 
-		flag = get(two, smer);
+		flag = getInt(two, &hash_smer);
 		while( flag != -1 ) {
 			//printf("\t%s\n", smer);
 			clear(q);
 
-			if( !(q = extend_right(q, smer, k-s, k)) ) {
+			if( !(q = extend_right_hash(q, hash_smer, k-s)) ) {
 				fprintf(stdout, "[ERROR] couldn't allocate\n");
 				return 1;
 			}
-			flag2 = get(q, kmer);
+			flag2 = getInt(q, &hash_kmer);
 			while( flag2 != -1 ) {
-				//printf("%s\t", kmer);
-				strncpy(half0, kmer, k/2);
-				strncpy(half1, kmer+k/2, k/2);
-				hash_half0 = hash(half0, k/2);
-				hash_half1 = hash(half1, k/2);
+				hash_half0 = hash_kmer >> k;
+				hash_half1 = hash_kmer & half_mask;
 				//printf("%s\t%s\t", half0, half1);
 				counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
 				//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->count);
 				input_counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
 				//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count);
 
+				rev_hash(hash_kmer, k, kmer);
 				for(j=0; j<s; j++) {
 					psm[i][get_base_index(kmer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
 				}
 
-				flag2 = get(q, kmer);
+				flag2 = getInt(q, &hash_kmer);
 			}
 
-			/*
-			reverse_kmer(smer, rev_smer, s);
-			//printf("%s\t%s\n", smer, rev_smer);
-
-			if(!is_palyndrome(smer, rev_smer)) {
-				clear(q);
-
-				if( !(q = extend_right(q, rev_smer, k-s, k)) ) {
-					fprintf(stdout, "[ERROR] couldn't allocate\n");
-					return 1;
-				}
-				flag2 = get(q, kmer);
-				while( flag2 != -1 ) {
-					//printf("%s\t", kmer);
-					strncpy(half0, kmer, k/2);
-					strncpy(half1, kmer+k/2, k/2);
-					hash_half0 = hash(half0, k/2);
-					hash_half1 = hash(half1, k/2);
-					//printf("%s\t%s\t", half0, half1);
-					counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-					//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->count);
-					input_counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
-					//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count);
-
-					for(j=0; j<s; j++) {
-						psm[i][get_base_index(kmer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-					}
-
-					flag2 = get(q, kmer);
-				}
-			}
-			*/
-
-
-			flag = get(two, smer);
+			flag = getInt(two, &hash_smer);
 		}
 
 		//printf("\n");
@@ -583,12 +531,11 @@ int main(int argc, const char * argv[]) {
 
 	fprintf(fp, "k-mer\tIP_count\tIP_freq\tInput_count\tInput_freq\tdiff\tdiff_log2\n");
 	for(i=0; i<expected_smer; i++) {
-		rev_hash(i, s, kmer);
 		freq = (double)counts[i]/(double)total;
 		freq_input = (double)input_counts[i]/(double)total_input;
 		diff = freq/freq_input;
 		diff_log2 = log2(diff);
-		fprintf(fp, "%s\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\n", kmer, counts[i], freq, input_counts[i], freq_input, diff, diff_log2);
+		fprintf(fp, "%s\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\n", smers[i], counts[i], freq, input_counts[i], freq_input, diff, diff_log2);
 	}
 	fclose(fp);
 
@@ -847,37 +794,7 @@ graph_t * load_graph(const char * pattern, int k, int nodes, int edges) {
 	return dbg;
 }
 
-set_t * extend_right(set_t * q, char * str, int times, int l) {
-	if (times == 0) {
-		put(q, str);
-		return q;
-	}
-	if(times < 0)
-		return q;
 
-	char * support;
-	if( !(support = (char*)malloc(sizeof(char) * (l+1))) )
-		return NULL;
-	strcpy(support, str);
-	int i = 0;
-	while(str[i] != '\0')
-		i++;
-	support[i+1] = '\0';
-	support[i] = 'A';
-	q = extend_right(q, support, times-1, l);
-	support[i] = 'C';
-	q = extend_right(q, support, times-1, l);
-	support[i] = 'G';
-	q = extend_right(q, support, times-1, l);
-	support[i] = 'T';
-	q = extend_right(q, support, times-1, l);
-
-	free(support);
-
-	return q;
-}
-
-/*
 numeric_set_t * extend_right_hash(numeric_set_t * set, int hash, int times) {
 	if (times == 0) {
 		putInt(set, hash);
@@ -893,7 +810,7 @@ numeric_set_t * extend_right_hash(numeric_set_t * set, int hash, int times) {
 		extend_right_hash(set, shifted+i, times-1);
 	}
 }
-*/
+
 
 int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 	int i;

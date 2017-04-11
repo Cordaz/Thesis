@@ -69,7 +69,7 @@ int is_in(numeric_set_t * q, int x) {
 	return 0;
 }
 
-void clear(set_t * q) {
+void clear(numeric_set_t * q) {
 	q->first = 0;
 	q->last = 0;
 	q->valid_items = 0;
