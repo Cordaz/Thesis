@@ -203,6 +203,11 @@ int main(int argc, const char * argv[]) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
+		char * rev_read;
+		if( !(rev_read = (char*)malloc(sizeof(char) * (l+1))) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
+			return 1;
+		}
 		int index;
 		int sublen;
 
@@ -241,6 +246,21 @@ int main(int argc, const char * argv[]) {
 						return 1;
 					}
 					index = index + sublen;
+				}
+
+				//Reverse complementary
+				reverse_kmer(read, rev_read, l);
+				//printf("%s\n", rev_read);
+				if(!is_palyndrome(read, rev_read)) {
+					index = 0;
+					while( (index = get_next_substring(rev_read, index, k, &sublen)) != -1 ) {
+						//Each substring should be mapped
+						if (map_read(rev_read+index, sublen, k, dbg, q)) {
+							fprintf(stdout, "[ERROR] couldn't allocate\n");
+							return 1;
+						}
+						index = index + sublen;
+					}
 				}
 
 			}
@@ -288,6 +308,21 @@ int main(int argc, const char * argv[]) {
 					index = index + sublen;
 				}
 
+				//Reverse complementary
+				reverse_kmer(read, rev_read, l);
+				//printf("%s\n", rev_read);
+				if(!is_palyndrome(read, rev_read)) {
+					index = 0;
+					while( (index = get_next_substring(rev_read, index, k, &sublen)) != -1 ) {
+						//Each substring should be mapped
+						if (map_input_read(rev_read+index, sublen, k, dbg, q)) {
+							fprintf(stdout, "[ERROR] couldn't allocate\n");
+							return 1;
+						}
+						index = index + sublen;
+					}
+				}
+
 			}
 			if(i==skip_line) {
 				i=0;
@@ -301,6 +336,16 @@ int main(int argc, const char * argv[]) {
 		timeinfo = localtime ( &rawtime );
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Processing of Input complete\n");
+	}
+
+	// Getting total
+	unsigned long total = 0;
+	unsigned long total_input = 0;
+	for(i=0; i<nodes; i++) {
+		for(j=0; j<nodes; j++) {
+			total += (unsigned long)dbg->nodes[i]->out_kstep[j]->count;
+			total_input += (unsigned long)dbg->nodes[i]->out_kstep[j]->input_count;
+		}
 	}
 
 
@@ -367,8 +412,6 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
-	unsigned long total = expected_smer; //Fills the gap of Pseudo-count
-	unsigned long total_input = expected_smer;
 
 	char ** smers;
 	if( !(smers = (char**)malloc(sizeof(char*) * (expected_smer) )) ) {
