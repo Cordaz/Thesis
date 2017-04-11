@@ -1,6 +1,8 @@
 #ifndef MYLIB_H
 	#define MYLIB_H
 
+	#include "set.h"
+
 	/*
 	 * Hash the string (of length passed after) passed as argument as:
 	 * A -> 0 (00)
@@ -60,7 +62,11 @@
 	 * Put the result in substituted.
 	 *
 	 */
-	void substitute_all(char * kmer, char ** substituted, int k);
+	void substitute_all(char *, char **, int);
+
+
+	set_t * substitute_one(set_t *, char *, int);
+
 
 	/*
 	 * Returns the number corresponding to the base:
