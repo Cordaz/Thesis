@@ -180,6 +180,36 @@ set_t * substitute_one(set_t * q, char * kmer, int k) {
 	return q;
 }
 
+/*
+numeric_set_t * substitute_one_hash(numeric_set_t * set, int hash, int k, int * positional_masks) {
+	int i, j;
+	int t;
+
+	for(i=0; i<k; i++) {
+		t = hash & positional_masks[i];
+		for(j=0; j<4; j++) {
+			putInt(set, t + (j << 2*i) );
+		}
+	}
+
+	return set;
+}
+
+int * init_positional_masks(int k) {
+	int * ms;
+	if( !(ms = (int*)malloc(sizeof(int) * k)) ) {
+		return NULL;
+	}
+	int full_ms = (int)pow((double)4, k) - 1;
+	int i;
+	for(i=0; i<k; i++) {
+		ms[i] = full_ms - (3 << 2*i);
+	}
+
+	return ms;
+}
+*/
+
 
 
 int get_base_index(char b) {

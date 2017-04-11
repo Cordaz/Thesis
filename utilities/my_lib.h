@@ -67,6 +67,12 @@
 
 	set_t * substitute_one(set_t *, char *, int);
 
+	/*
+	numeric_set_t * substitute_one_hash(numeric_set_t *, int, int, int *);
+
+	int * init_positional_masks(int);
+	*/
+
 
 	/*
 	 * Returns the number corresponding to the base:

@@ -877,6 +877,24 @@ set_t * extend_right(set_t * q, char * str, int times, int l) {
 	return q;
 }
 
+/*
+numeric_set_t * extend_right_hash(numeric_set_t * set, int hash, int times) {
+	if (times == 0) {
+		putInt(set, hash);
+		return set;
+	}
+	if (times < 0)
+		return set;
+
+	int shifted;
+	int i;
+	for(i=0; i<4; i++) {
+		shifted = hash << 2;
+		extend_right_hash(set, shifted+i, times-1);
+	}
+}
+*/
+
 int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 	int i;
 	node_t * n = dbg->nodes[hash(read, k/2)]; //Get starting node
