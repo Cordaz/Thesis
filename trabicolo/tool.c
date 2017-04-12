@@ -51,7 +51,7 @@ int main(int argc, const char * argv[]) {
 	int k = K;
 	int l;
 	int psm_arg = 0;
-	int g;
+	int g = 0;
 	int build_or_load = 0;
 	struct argparse_option options[] = {
 		OPT_HELP(),
