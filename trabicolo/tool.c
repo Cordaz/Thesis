@@ -23,7 +23,6 @@
 #define FASTA 1
 #define FASTQ 2
 
-#define L 34
 #define K 10
 
 static const char* const usage[] = {
@@ -39,17 +38,18 @@ int map_read(char *, int, int, graph_t *, fifo_t *);
 int map_input_read(char *, int, int, graph_t *, fifo_t *);
 node_t * get_successor(node_t *, int, char);
 
+FILE * get_file_info(FILE *, int *, int *);
+
 int main(int argc, const char * argv[]) {
 	//Setup
 	const char * pattern = NULL;
 	const char * out_p = NULL;
-	char * format = NULL;
 	int input_format = 0;
 	const char * input_file = NULL;
 	const char * experiment_file = NULL;
 	int s = 0;
 	int k = K;
-	int l = L;
+	int l;
 	int psm_arg = 0;
 	int g;
 	int build_or_load = 0;
@@ -60,12 +60,10 @@ int main(int argc, const char * argv[]) {
 		OPT_GROUP("Required (1)"),
 		OPT_STRING('p', "pattern", &pattern, "pattern to .graph.*, .psm and .approx.cnt files"),
 		OPT_GROUP("Required (2)"),
-		OPT_STRING('f', "format", &format, "format of files to read"),
 		OPT_STRING('i', "input", &input_file, "Input file (Control)"),
 		OPT_STRING('e', "experiment", &experiment_file, "Experiment file"),
 		OPT_GROUP("Optional"),
 		OPT_INTEGER('k', "kmer", &k, "kmer length of graph (default 10)"),
-		OPT_INTEGER('l', "length", &l, "reads length (default 34)"),
 		OPT_BOOLEAN('m', "psm", &psm_arg, "output Position Specific Matrix ext='.psm'"),
 		OPT_STRING('n', "name", &out_p, "pattern to name output file (default 'pid.out')"),
 		OPT_BOOLEAN('g', "graph", &g, "output graph (of experiment) ext='.graph'"),
@@ -91,13 +89,13 @@ int main(int argc, const char * argv[]) {
 
 	//printf("%s\t%s\t%s\n", format, input_file, experiment_file);
 	if(!pattern) {
-		if(!format) {
+		if(!experiment_file) {
 			fprintf(stdout, "[ERROR] required group 1 or 2 should be specified\n\n");
 			argparse_usage(&argparse);
 			return 0;
 		}
 	}
-	if(!format) {
+	if(!experiment_file) {
 		if(!pattern) {
 			fprintf(stdout, "[ERROR] required group 1 or 2 should be specified\n\n");
 			argparse_usage(&argparse);
@@ -107,7 +105,7 @@ int main(int argc, const char * argv[]) {
 
 	if(pattern) {
 		build_or_load = LOAD;
-	} else if (format && input_file && experiment_file) {
+	} else if (input_file && experiment_file) {
 		build_or_load = BUILD;
 	} else {
 		fprintf(stdout, "[ERROR] required group 1 or 2 should be specified\n\n");
@@ -115,12 +113,6 @@ int main(int argc, const char * argv[]) {
 		return 0;
 	}
 
-	if(format) {
-		if(strcmp(format, "fasta") == 0)
-			input_format = FASTA;
-		else if(strcmp(format, "fastq") == 0)
-			input_format = FASTQ;
-	}
 
 	int pid = getpid();
 
@@ -146,12 +138,8 @@ int main(int argc, const char * argv[]) {
 	if(build_or_load == LOAD)
 		fprintf(stdout, "                  @params pattern '%s'\n", pattern);
 	if(build_or_load == BUILD) {
-		fprintf(stdout, "                  @params format '%s'\n", format);
 		fprintf(stdout, "                  @params input '%s'\n", input_file);
 		fprintf(stdout, "                  @params experiment '%s'\n", experiment_file);
-		if(l != L) {
-			fprintf(stdout, "                  @params l %d\n", l);
-		}
 	}
 	fprintf(stdout, "                  @params k %d\n", k);
 	fprintf(stdout, "                  @output pattern '%s'\n", out_pattern);
@@ -198,6 +186,20 @@ int main(int argc, const char * argv[]) {
 			return 1;
 		}
 
+		if( !(fp = fopen(experiment_file, "r")) ) {
+			fprintf(stdout, "[ERROR] can't open %s\n", experiment_file);
+			return 1;
+		}
+
+		int skip_line;
+		if( !(fp = get_file_info(fp, &input_format, &l)) ) {
+			return 1;
+		}
+		if (input_format == FASTA)
+			skip_line = 2;
+		else //is FASTQ
+			skip_line = 4;
+
 		char * read;
 		if( !(read = (char*)malloc(sizeof(char) * (l+1))) ) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
@@ -211,21 +213,13 @@ int main(int argc, const char * argv[]) {
 		int index;
 		int sublen;
 
+		//printf("%d\t%d\n", l, input_format);
+
 		//// OPENING READS FILE
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
-		fprintf(stdout, "Reading %s\n", experiment_file);
-
-		if( !(fp = fopen(experiment_file, "r")) ) {
-			fprintf(stdout, "[ERROR] can't open %s\n", experiment_file);
-			return 1;
-		}
-		int skip_line;
-		if (input_format == FASTA)
-			skip_line = 2;
-		else //is FASTQ
-			skip_line = 4;
+		fprintf(stdout, "Reading '%s'\n", experiment_file);
 
 
 		//Read first line
@@ -279,15 +273,35 @@ int main(int argc, const char * argv[]) {
 
 
 		//// MAPPING CONTROL FILE
-		time ( &rawtime );
-		timeinfo = localtime ( &rawtime );
-		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
-		fprintf(stdout, "Reading %s\n", input_file);
-
 		if( !(fp = fopen(input_file, "r")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", input_file);
 			return 1;
 		}
+
+		if( !(fp = get_file_info(fp, &input_format, &l)) ) {
+			return 1;
+		}
+		if (input_format == FASTA)
+			skip_line = 2;
+		else //is FASTQ
+			skip_line = 4;
+
+		free(read);
+		if( !(read = (char*)malloc(sizeof(char) * (l+1))) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
+			return 1;
+		}
+		free(rev_read);
+		if( !(rev_read = (char*)malloc(sizeof(char) * (l+1))) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
+			return 1;
+		}
+
+		time ( &rawtime );
+		timeinfo = localtime ( &rawtime );
+		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
+		fprintf(stdout, "Reading '%s'\n", input_file);
+
 		//Read first line
 		fgets(buf, BUFFER, fp);
 		i=0;
@@ -439,12 +453,6 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
-	char * rev_smer;
-	if( !(rev_smer = (char*)malloc(sizeof(char)*(s+1))) ) {
-		fprintf(stdout, "[ERROR] couldn't allocate\n");
-		return 1;
-	}
-
 	char * half0, * half1;
 	if( !(half0 = (char*)malloc(sizeof(char) * (k/2+1))) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
@@ -456,7 +464,6 @@ int main(int argc, const char * argv[]) {
 	}
 	int hash_half0, hash_half1;
 
-	int p;
 	int flag;
 	int flag2;
 
@@ -511,40 +518,6 @@ int main(int argc, const char * argv[]) {
 
 				flag2 = get(q, kmer);
 			}
-
-			/*
-			reverse_kmer(smer, rev_smer, s);
-			//printf("%s\t%s\n", smer, rev_smer);
-
-			if(!is_palyndrome(smer, rev_smer)) {
-				clear(q);
-
-				if( !(q = extend_right(q, rev_smer, k-s, k)) ) {
-					fprintf(stdout, "[ERROR] couldn't allocate\n");
-					return 1;
-				}
-				flag2 = get(q, kmer);
-				while( flag2 != -1 ) {
-					//printf("%s\t", kmer);
-					strncpy(half0, kmer, k/2);
-					strncpy(half1, kmer+k/2, k/2);
-					hash_half0 = hash(half0, k/2);
-					hash_half1 = hash(half1, k/2);
-					//printf("%s\t%s\t", half0, half1);
-					counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-					//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->count);
-					input_counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
-					//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count);
-
-					for(j=0; j<s; j++) {
-						psm[i][get_base_index(kmer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-					}
-
-					flag2 = get(q, kmer);
-				}
-			}
-			*/
-
 
 			flag = get(two, smer);
 		}
@@ -633,7 +606,6 @@ int main(int argc, const char * argv[]) {
 
 	//Output graph
 	if(g) {
-		char path[BUFFER+1];
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
@@ -1021,4 +993,33 @@ graph_t * build_graph(double nodes, double edges, int k) {
 	free(kmer);
 
 	return dbg;
+}
+
+FILE * get_file_info(FILE * fp, int * format, int * reads_len) {
+	char buf[BUFFER+1];
+	fgets(buf, BUFFER, fp);
+	//printf("%s\n", buf);
+	//First line should start with '@' for fastq, '>' for fasta
+	if(buf[0] == '@')
+		*format = FASTQ;
+	else if(buf[0] == '>')
+		*format = FASTA;
+	else {
+		fprintf(stdout, "[ERROR] format not recognized\n");
+		return NULL;
+	}
+
+	//Now get reads length
+	if(feof(fp)) {
+		fprintf(stdout, "[ERROR] unexpected EOF\n");
+		return NULL;
+	}
+
+	fgets(buf, BUFFER, fp);
+	//printf("%s\n", buf);
+	*reads_len = strlen(buf) - 1; //Ignoring '\n'
+
+	rewind(fp);
+
+	return fp;
 }
