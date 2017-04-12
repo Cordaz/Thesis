@@ -64,9 +64,13 @@
 	 */
 	void substitute_all(char *, char **, int);
 
-	set_t * substitute(set_t *, char *, int, int, int);
 
-	set_t * substitute_one(set_t *, char *, int);
+	/*
+	 * Substitute in all possible ways the kmer provided for the specified number of times
+	 * Add all substituted to a preallocated set, doesn't add the original one.
+	 *
+	 */
+	set_t * substitute(set_t *, char *, int, int, int);
 
 
 	/*

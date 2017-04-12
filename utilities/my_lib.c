@@ -189,28 +189,6 @@ set_t * substitute(set_t * set, char * kmer, int k, int start, int times) {
 
 }
 
-
-set_t * substitute_one(set_t * q, char * kmer, int k) {
-	int i, j;
-	char * support;
-	if( !(support = (char*)malloc(sizeof(char) * (k+1))) )
-		return NULL;
-	for(i=0; i<k; i++) {
-		strcpy(support, kmer);
-		for(j=0; j<4; j++) {
-			support[i] = bases[j];
-			if( !is_in(q, support) )
-				put(q, support);
-		}
-	}
-
-	free(support);
-
-	return q;
-}
-
-
-
 int get_base_index(char b) {
 	switch(b) {
 		case 'A':

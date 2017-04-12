@@ -50,6 +50,7 @@ int main(int argc, const char * argv[]) {
 	int s = 0;
 	int k = K;
 	int l;
+	int num_of_subs = 2;
 	int psm_arg = 0;
 	int g = 0;
 	int build_or_load = 0;
@@ -64,6 +65,7 @@ int main(int argc, const char * argv[]) {
 		OPT_STRING('e', "experiment", &experiment_file, "Experiment file"),
 		OPT_GROUP("Optional"),
 		OPT_INTEGER('k', "kmer", &k, "kmer length of graph (default 10)"),
+		OPT_INTEGER('b', "num-subs", &num_of_subs, "Accepted substitution in approximate counting (default 2)"),
 		OPT_BOOLEAN('m', "psm", &psm_arg, "output Position Specific Matrix ext='.psm'"),
 		OPT_STRING('n', "name", &out_p, "pattern to name output file (default 'pid.out')"),
 		OPT_BOOLEAN('g', "graph", &g, "output graph (of experiment) ext='.graph'"),
@@ -142,6 +144,7 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "                  @params experiment '%s'\n", experiment_file);
 	}
 	fprintf(stdout, "                  @params k %d\n", k);
+	fprintf(stdout, "                  @params b (num_of_subs) %d\n", num_of_subs);
 	fprintf(stdout, "                  @output pattern '%s'\n", out_pattern);
 	fprintf(stdout, "                  @output approximate count\n");
 	if(psm_arg) {
@@ -466,7 +469,7 @@ int main(int argc, const char * argv[]) {
 		clear(subs);
 		//printf("%s\n", smers[i]);
 		put(subs, smers[i]);
-		if( !(subs = substitute(subs, smers[i], s, 0, 2)) ) {
+		if( !(subs = substitute(subs, smers[i], s, 0, num_of_subs)) ) {
 			fprintf(stdout, "[ERROR] queue is not working\n");
 			return 1;
 		}
@@ -520,8 +523,6 @@ int main(int argc, const char * argv[]) {
 	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 	fprintf(stdout, "Generating output: count\n");
 	strncpy(out_file, out_pattern, BUFFER);
-	sprintf(buf, ".s%d", s);
-	strcat(out_file, buf);
 	strcat(out_file, ".approx.cnt");
 	if( !(fp = fopen(out_file, "w+")) ) {
 		fprintf(stdout, "[ERROR] can't open %s\n", out_file);
@@ -550,8 +551,6 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Generating output: position specific matrix\n");
 		strncpy(out_file, out_pattern, BUFFER);
-		sprintf(buf, ".s%d", s);
-		strcat(out_file, buf);
 		strcat(out_file, ".psm");
 		if( !(fp = fopen(out_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
@@ -589,27 +588,21 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Generating output: graph\n");
 		strncpy(out_file, out_pattern, BUFFER);
-		sprintf(buf, ".k%d.graph", k);
-		strcat(out_file, buf);
-		strcat(out_file, ".nodes");
+		strcat(out_file, ".graph.nodes");
 		FILE * fp_nodes;
 		if( !(fp_nodes = fopen(out_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
 			return 1;
 		}
 		strncpy(out_file, out_pattern, BUFFER);
-		sprintf(buf, ".k%d.graph", k);
-		strcat(out_file, buf);
-		strcat(out_file, ".edges.out");
+		strcat(out_file, ".graph.edges.out");
 		FILE * fp_edges_out;
 		if( !(fp_edges_out = fopen(out_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
 			return 1;
 		}
 		strncpy(out_file, out_pattern, BUFFER);
-		sprintf(buf, ".k%d.graph", k);
-		strcat(out_file, buf);
-		strcat(out_file, ".edges.out");
+		strcat(out_file, ".graph.edges.out");
 		sprintf(buf, ".%dstep", k/2);
 		strcat(out_file, buf);
 		FILE * fp_edges_out_k;
