@@ -160,6 +160,35 @@ void substitute_all(char * kmer, char ** substituted, int k) {
 	}
 }
 
+set_t * substitute(set_t * set, char * kmer, int k, int start, int times) {
+	if(times == 0) {
+		//put(set, kmer);
+		return set;
+	}
+	if(times < 0)
+		return NULL;
+
+	char * support;
+	if( !(support = (char*)malloc(sizeof(char) * (k+1))) )
+		return NULL;
+
+	int i, j;
+
+	for(i=start; i<k; i++) {
+		for(j=0; j<4; j++) {
+			strcpy(support, kmer);
+			if(bases[j] != support[i]) {
+				support[i] = bases[j];
+				put(set, support);
+				set = substitute(set, support, k, i+1, times-1);
+			}
+		}
+	}
+
+	return set;
+
+}
+
 
 set_t * substitute_one(set_t * q, char * kmer, int k) {
 	int i, j;

@@ -51,7 +51,7 @@ int main(int argc, const char * argv[]) {
 	int k = K;
 	int l;
 	int psm_arg = 0;
-	int g;
+	int g = 0;
 	int build_or_load = 0;
 	struct argparse_option options[] = {
 		OPT_HELP(),
@@ -413,15 +413,9 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
-	int dim = 1 + 3*s;
-	set_t * one;
-	if( !(one = initialize_set(dim, s)) ) {
-		fprintf(stdout, "[ERROR] couldn't allocate\n");
-		return 1;
-	}
-	dim = dim + 3*s/2 * 3*(s-1);
-	set_t * two;
-	if( !(two = initialize_set(dim, s)) ) {
+	int dim = 1 + 3*s + 3*s/2 * 3*(s-1);
+	set_t * subs;
+	if( !(subs = initialize_set(dim, s)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
@@ -469,28 +463,14 @@ int main(int argc, const char * argv[]) {
 
 	//Approximate counting and psm
 	for(i=0; i<expected_smer; i++) {
-		clear(one);
-		clear(two);
+		clear(subs);
 		//printf("%s\n", smers[i]);
-		if( !(one = substitute_one(one, smers[i], s)) ) {
+		put(subs, smers[i]);
+		if( !(subs = substitute(subs, smers[i], s, 0, 2)) ) {
 			fprintf(stdout, "[ERROR] queue is not working\n");
 			return 1;
 		}
-		flag = get(one, smer);
-		while( flag != -1 ) {
-			//printf("\t%s\n", smer);
-			two = substitute_one(two, smer, s);
-			/*
-			str_dequeue(two, kmer);
-			while( strcmp(kmer, "") ) {
-				printf("\t\t%s\n", kmer);
-				str_dequeue(two, kmer);
-			}
-			*/
-			flag = get(one, smer);
-		}
-
-		flag = get(two, smer);
+		flag = get(subs, smer);
 		while( flag != -1 ) {
 			//printf("\t%s\n", smer);
 			clear(q);
@@ -519,10 +499,8 @@ int main(int argc, const char * argv[]) {
 				flag2 = get(q, kmer);
 			}
 
-			flag = get(two, smer);
+			flag = get(subs, smer);
 		}
-
-		//printf("\n");
 
 		//printf("%d\t%s\t%lu\t%lu\n", i, smers[i], counts[i], input_counts[i]);
 	}
