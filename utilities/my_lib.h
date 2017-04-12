@@ -64,6 +64,7 @@
 	 */
 	void substitute_all(char *, char **, int);
 
+	set_t * substitute(set_t *, char *, int, int, int);
 
 	set_t * substitute_one(set_t *, char *, int);
 
