@@ -26,7 +26,7 @@
 #define K 10
 
 static const char* const usage[] = {
-	"dsc [options] (-p path_pattern | -f format -i input -e experiment) -s search_size",
+	"dsc [options] (-p path_pattern | -i input -e experiment) -s search_size",
 	NULL
 };
 
@@ -340,6 +340,13 @@ int main(int argc, const char * argv[]) {
 		}
 	}
 
+	unsigned long count;
+	unsigned long input_count;
+	double freq;
+	double freq_input;
+	double diff;
+	double diff_log2;
+
 
 	//estimate number of s-mer
 	int expected_smer;
@@ -471,13 +478,17 @@ int main(int argc, const char * argv[]) {
 				hash_half0 = hash(half0, k/2);
 				hash_half1 = hash(half1, k/2);
 				//printf("%s\t%s\t", half0, half1);
-				counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-				//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->count);
-				input_counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
-				//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count);
-
-				for(j=0; j<s; j++) {
-					psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+				count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+				input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+				freq = (double)count/total;
+				freq_input = (double)input_count/total_input;
+				diff = freq / freq_input;
+				if(diff >= 1) {
+					counts[i] += count;
+					input_counts[i] += input_count;
+					for(j=0; j<s; j++) {
+						psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+					}
 				}
 
 				flag2 = get(q, kmer);
@@ -501,13 +512,17 @@ int main(int argc, const char * argv[]) {
 						hash_half0 = hash(half0, k/2);
 						hash_half1 = hash(half1, k/2);
 						//printf("%s\t%s\t", half0, half1);
-						counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-						//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->count);
-						input_counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
-						//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count);
-
-						for(j=0; j<s; j++) {
-							psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+						count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+						input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+						freq = (double)count/total;
+						freq_input = (double)input_count/total_input;
+						diff = freq / freq_input;
+						if(diff >= 1) {
+							counts[i] += count;
+							input_counts[i] += input_count;
+							for(j=0; j<s; j++) {
+								psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+							}
 						}
 
 						flag2 = get(q, kmer);
@@ -542,10 +557,6 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "[ERROR] can't open %s\n", out_file);
 		return 1;
 	}
-	double freq;
-	double freq_input;
-	double diff;
-	double diff_log2;
 
 	fprintf(fp, "k-mer\tIP_count\tIP_freq\tInput_count\tInput_freq\tdiff\tdiff_log2\n");
 	for(i=0; i<expected_smer; i++) {
