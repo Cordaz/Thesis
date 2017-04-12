@@ -49,6 +49,7 @@ int main(int argc, const char * argv[]) {
 	const char * experiment_file = NULL;
 	int s = 0;
 	int k = K;
+	int d = 0;
 	int l;
 	int num_of_subs = 2;
 	int psm_arg = 0;
@@ -65,7 +66,8 @@ int main(int argc, const char * argv[]) {
 		OPT_STRING('e', "experiment", &experiment_file, "Experiment file"),
 		OPT_GROUP("Optional"),
 		OPT_INTEGER('k', "kmer", &k, "kmer length of graph (default 10)"),
-		OPT_INTEGER('b', "num-subs", &num_of_subs, "Accepted substitution in approximate counting (default 2)"),
+		OPT_INTEGER('N', "num-subs", &num_of_subs, "Accepted substitution in approximate counting (default 2)"),
+		OPT_BOOLEAN('d', "double", &d, "Consider double strand"),
 		OPT_BOOLEAN('m', "psm", &psm_arg, "output Position Specific Matrix ext='.psm'"),
 		OPT_STRING('n', "name", &out_p, "pattern to name output file (default 'pid.out')"),
 		OPT_BOOLEAN('g', "graph", &g, "output graph (of experiment) ext='.graph'"),
@@ -143,8 +145,13 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "                  @params input '%s'\n", input_file);
 		fprintf(stdout, "                  @params experiment '%s'\n", experiment_file);
 	}
+	if(d) {
+		fprintf(stdout, "                  @params d 'true'\n");
+	} else {
+		fprintf(stdout, "                  @params d 'false'\n");
+	}
 	fprintf(stdout, "                  @params k %d\n", k);
-	fprintf(stdout, "                  @params b (num_of_subs) %d\n", num_of_subs);
+	fprintf(stdout, "                  @params N %d\n", num_of_subs);
 	fprintf(stdout, "                  @output pattern '%s'\n", out_pattern);
 	fprintf(stdout, "                  @output approximate count\n");
 	if(psm_arg) {
@@ -244,22 +251,6 @@ int main(int argc, const char * argv[]) {
 					}
 					index = index + sublen;
 				}
-
-				//Reverse complementary
-				reverse_kmer(read, rev_read, l);
-				//printf("%s\n", rev_read);
-				if(!is_palyndrome(read, rev_read)) {
-					index = 0;
-					while( (index = get_next_substring(rev_read, index, k, &sublen)) != -1 ) {
-						//Each substring should be mapped
-						if (map_read(rev_read+index, sublen, k, dbg, q)) {
-							fprintf(stdout, "[ERROR] couldn't allocate\n");
-							return 1;
-						}
-						index = index + sublen;
-					}
-				}
-
 			}
 			if(i==skip_line) {
 				i=0;
@@ -324,22 +315,6 @@ int main(int argc, const char * argv[]) {
 					}
 					index = index + sublen;
 				}
-
-				//Reverse complementary
-				reverse_kmer(read, rev_read, l);
-				//printf("%s\n", rev_read);
-				if(!is_palyndrome(read, rev_read)) {
-					index = 0;
-					while( (index = get_next_substring(rev_read, index, k, &sublen)) != -1 ) {
-						//Each substring should be mapped
-						if (map_input_read(rev_read+index, sublen, k, dbg, q)) {
-							fprintf(stdout, "[ERROR] couldn't allocate\n");
-							return 1;
-						}
-						index = index + sublen;
-					}
-				}
-
 			}
 			if(i==skip_line) {
 				i=0;
@@ -450,6 +425,12 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
+	char * rev_smer;
+	if( !(rev_smer = (char*)malloc(sizeof(char)*(s+1))) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+
 	char * half0, * half1;
 	if( !(half0 = (char*)malloc(sizeof(char) * (k/2+1))) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
@@ -496,11 +477,42 @@ int main(int argc, const char * argv[]) {
 				//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count);
 
 				for(j=0; j<s; j++) {
-					psm[i][get_base_index(kmer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+					psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
 				}
 
 				flag2 = get(q, kmer);
 			}
+
+			//REVERSE
+			reverse_kmer(smer, rev_smer, s);
+			if(d) {
+				clear(q);
+
+				if( !(q = extend_right(q, rev_smer, k-s, k)) ) {
+					fprintf(stdout, "[ERROR] couldn't allocate\n");
+					return 1;
+				}
+				flag2 = get(q, kmer);
+				while( flag2 != -1 ) {
+					//printf("%s\t", kmer);
+					strncpy(half0, kmer, k/2);
+					strncpy(half1, kmer+k/2, k/2);
+					hash_half0 = hash(half0, k/2);
+					hash_half1 = hash(half1, k/2);
+					//printf("%s\t%s\t", half0, half1);
+					counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+					//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->count);
+					input_counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+					//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count);
+
+					for(j=0; j<s; j++) {
+						psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+					}
+
+					flag2 = get(q, kmer);
+				}
+			}
+			//END REVERSE
 
 			flag = get(subs, smer);
 		}
