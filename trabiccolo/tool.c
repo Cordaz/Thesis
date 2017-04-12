@@ -484,32 +484,34 @@ int main(int argc, const char * argv[]) {
 			}
 
 			//REVERSE
-			reverse_kmer(smer, rev_smer, s);
 			if(d) {
-				clear(q);
+				reverse_kmer(smer, rev_smer, s);
+				if(!is_palyndrome(smer, rev_smer)) {
+					clear(q);
 
-				if( !(q = extend_right(q, rev_smer, k-s, k)) ) {
-					fprintf(stdout, "[ERROR] couldn't allocate\n");
-					return 1;
-				}
-				flag2 = get(q, kmer);
-				while( flag2 != -1 ) {
-					//printf("%s\t", kmer);
-					strncpy(half0, kmer, k/2);
-					strncpy(half1, kmer+k/2, k/2);
-					hash_half0 = hash(half0, k/2);
-					hash_half1 = hash(half1, k/2);
-					//printf("%s\t%s\t", half0, half1);
-					counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-					//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->count);
-					input_counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
-					//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count);
-
-					for(j=0; j<s; j++) {
-						psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+					if( !(q = extend_right(q, rev_smer, k-s, k)) ) {
+						fprintf(stdout, "[ERROR] couldn't allocate\n");
+						return 1;
 					}
-
 					flag2 = get(q, kmer);
+					while( flag2 != -1 ) {
+						//printf("%s\t", kmer);
+						strncpy(half0, kmer, k/2);
+						strncpy(half1, kmer+k/2, k/2);
+						hash_half0 = hash(half0, k/2);
+						hash_half1 = hash(half1, k/2);
+						//printf("%s\t%s\t", half0, half1);
+						counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+						//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->count);
+						input_counts[i] += (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+						//printf("%d\n", dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count);
+
+						for(j=0; j<s; j++) {
+							psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+						}
+
+						flag2 = get(q, kmer);
+					}
 				}
 			}
 			//END REVERSE
