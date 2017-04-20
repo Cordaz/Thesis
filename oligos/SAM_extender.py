@@ -20,7 +20,7 @@ genome_path = dataset_path + "genome/"
 #Works on 34 long reads
 read_length = 34
 #Extension
-ext_length = 100
+ext_length = 34
 
 
 #Constant
@@ -111,6 +111,8 @@ if len(args) < 1:
 
 input_file_path = dataset_path + args[0]
 
+last_pos = -1
+
 with open(input_file_path, "r") as input_file:
     line = input_file.readline()
     while line[0] == '@':
@@ -133,10 +135,11 @@ with open(input_file_path, "r") as input_file:
             chrom_seq = get_chromosome_seq(chrom)
             chrom_in_use = chrom
             start = 0
-
-        seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
-        if seq:
-            print ">" + id_seq + "\n" + seq
+            last_pos = -1
+        if pos > last_pos:
+            seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
+            if seq:
+                print ">" + id_seq + "\n" + seq
 
 '''
 output_file = open(result_path + to_fasta(input_file_path), "w+")
