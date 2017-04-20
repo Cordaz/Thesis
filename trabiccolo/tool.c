@@ -34,8 +34,8 @@ graph_t * load_graph(const char *, int, int, int);
 set_t * extend_right(set_t *, char *, int, int);
 
 graph_t * build_graph(double, double, int);
-int map_read(char *, int, int, graph_t *, fifo_t *);
-int map_input_read(char *, int, int, graph_t *, fifo_t *);
+int map_read(char *, int, int, graph_t *, fifo_t *, int *, int);
+int map_input_read(char *, int, int, graph_t *, fifo_t *, int *, int);
 node_t * get_successor(node_t *, int, char);
 
 FILE * get_file_info(FILE *, int *, int *);
@@ -190,6 +190,17 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "                  created %d 1-step edges\n", (int)edges);
 		fprintf(stdout, "                  created %d %d-step edges\n", (int)(nodes*nodes), k/2);
 
+		int * last_seen;
+		if( !(last_seen = (int*)malloc(sizeof(int)*nodes*nodes)) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate\n");
+			return 1;
+		}
+		for(i=0; i<nodes*nodes; i++) {
+			last_seen[i] = -1;
+		}
+
+		int read_index;
+
 		fifo_t * q;
 		if ( !(q = init_queue(k/2)) ) {
 			fprintf(stdout, "[ERROR] couldn't allocate\n");
@@ -215,11 +226,13 @@ int main(int argc, const char * argv[]) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
+		/*
 		char * rev_read;
 		if( !(rev_read = (char*)malloc(sizeof(char) * (l+1))) ) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
+		*/
 		int index;
 		int sublen;
 
@@ -235,6 +248,7 @@ int main(int argc, const char * argv[]) {
 		//Read first line
 		fgets(buf, BUFFER, fp);
 		i=0;
+		read_index = 0;
 		while(!feof(fp)) {
 			i++;
 			if(i==2) {
@@ -245,12 +259,13 @@ int main(int argc, const char * argv[]) {
 				index = 0;
 				while( (index = get_next_substring(read, index, k, &sublen)) != -1 ) {
 					//Each substring should be mapped
-					if (map_read(read+index, sublen, k, dbg, q)) {
+					if (map_read(read+index, sublen, k, dbg, q, last_seen, read_index)) {
 						fprintf(stdout, "[ERROR] couldn't allocate\n");
 						return 1;
 					}
 					index = index + sublen;
 				}
+				read_index++;
 			}
 			if(i==skip_line) {
 				i=0;
@@ -285,11 +300,13 @@ int main(int argc, const char * argv[]) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
+		/*
 		free(rev_read);
 		if( !(rev_read = (char*)malloc(sizeof(char) * (l+1))) ) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
+		*/
 
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
@@ -298,7 +315,12 @@ int main(int argc, const char * argv[]) {
 
 		//Read first line
 		fgets(buf, BUFFER, fp);
+		read_index = 0;
+		for(i=0; i<nodes*nodes; i++) {
+			last_seen[i] = -1;
+		}
 		i=0;
+
 		while(!feof(fp)) {
 			i++;
 			if(i==2) {
@@ -309,12 +331,13 @@ int main(int argc, const char * argv[]) {
 				index = 0;
 				while( (index = get_next_substring(read, index, k, &sublen)) != -1 ) {
 					//Each substring should be mapped
-					if (map_input_read(read+index, sublen, k, dbg, q)) {
+					if (map_input_read(read+index, sublen, k, dbg, q, last_seen, read_index)) {
 						fprintf(stdout, "[ERROR] couldn't allocate\n");
 						return 1;
 					}
 					index = index + sublen;
 				}
+				read_index++;
 			}
 			if(i==skip_line) {
 				i=0;
@@ -845,8 +868,9 @@ set_t * extend_right(set_t * q, char * str, int times, int l) {
 	return q;
 }
 
-int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
+int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q, int * last_seen, int read_index) {
 	int i;
+	int fullhash;
 	node_t * n = dbg->nodes[hash(read, k/2)]; //Get starting node
 	node_t * n0;
 	q = enqueue(q, n);
@@ -861,7 +885,11 @@ int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 		n = get_successor(n, k/2, *(read+i+k/2-1));
 		n0 = dequeue(q);
 		//printf("n0: %s, n: %s, read: %s\n", n0->seq, n->seq, read);
-		dbg->nodes[n0->id]->out_kstep[n->id]->count += 1;
+		fullhash = (n0->id << k) + n->id;
+		if(read_index > last_seen[fullhash]) {
+			dbg->nodes[n0->id]->out_kstep[n->id]->count += 1;
+			last_seen[fullhash] = read_index;
+		}
 
 		q = enqueue(q, n);
 	}
@@ -869,8 +897,9 @@ int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 	return 0;
 }
 
-int map_input_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
+int map_input_read(char * read, int l, int k, graph_t * dbg, fifo_t * q, int * last_seen, int read_index) {
 	int i;
+	int fullhash;
 	node_t * n = dbg->nodes[hash(read, k/2)]; //Get starting node
 	node_t * n0;
 	q = enqueue(q, n);
@@ -885,8 +914,11 @@ int map_input_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 		n = get_successor(n, k/2, *(read+i+k/2-1));
 		n0 = dequeue(q);
 		//printf("n0: %s, n: %s, read: %s\n", n0->seq, n->seq, read);
-		dbg->nodes[n0->id]->out_kstep[n->id]->input_count += 1;
-
+		fullhash = (n0->id << k) + n->id;
+		if(read_index > last_seen[fullhash]) {
+			dbg->nodes[n0->id]->out_kstep[n->id]->input_count += 1;
+			last_seen[fullhash] = read_index;
+		}
 
 		q = enqueue(q, n);
 	}
