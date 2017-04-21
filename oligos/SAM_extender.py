@@ -117,8 +117,9 @@ last_pos = -1
 with open(input_file_path, "r") as input_file:
     line = input_file.readline()
     while line[0] == '@':
-        (chrom, length) = get_pair_chr_length(line)
-        chrom_length[chrom] = length
+        if line[0:3] == '@SQ':
+            (chrom, length) = get_pair_chr_length(line)
+            chrom_length[chrom] = length
         line = input_file.readline()
     #Process first line before loop
     (id_seq, strand, chrom, pos) = get_sam_info(line)
