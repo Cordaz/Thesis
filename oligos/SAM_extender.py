@@ -134,16 +134,17 @@ with open(input_file_path, "r") as input_file:
     #Process rest of file
     for line in input_file:
         (id_seq, strand, chrom, pos) = get_sam_info(line)
-        if chrom_in_use != chrom:
-            chrom_seq = get_chromosome_seq(chrom)
-            chrom_in_use = chrom
-            start = 0
-            last_pos = -1
-        if pos > last_pos:
-            seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
-	    last_pos = pos
-            if seq:
-                print ">" + id_seq + "\n" + seq
+        if chrom != '*':
+            if chrom_in_use != chrom:
+                chrom_seq = get_chromosome_seq(chrom)
+                chrom_in_use = chrom
+                start = 0
+                last_pos = -1
+            if pos > last_pos:
+                seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
+    	    last_pos = pos
+                if seq:
+                    print ">" + id_seq + "\n" + seq
 
 '''
 output_file = open(result_path + to_fasta(input_file_path), "w+")
