@@ -142,7 +142,7 @@ with open(input_file_path, "r") as input_file:
                 last_pos = -1
             if pos > last_pos:
                 seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
-    	    last_pos = pos
+        	    last_pos = pos
                 if seq:
                     print ">" + id_seq + "\n" + seq
 
