@@ -105,11 +105,12 @@ def extend_neg(chrom_seq, chrom_index):
 #Main
 
 args = sys.argv[1:]
-if len(args) < 1:
-    print "usage: input_file"
+if len(args) < 2:
+    print "usage: input_file extension"
     sys.exit(1)
 
 input_file_path = dataset_path + args[0]
+ext_length = int(args[1])
 
 last_pos = -1
 
@@ -127,6 +128,7 @@ with open(input_file_path, "r") as input_file:
     seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
     if seq:
         print ">" + id_seq + "\n" + seq
+	last_pos = pos
 
     #Process rest of file
     for line in input_file:
@@ -138,6 +140,7 @@ with open(input_file_path, "r") as input_file:
             last_pos = -1
         if pos > last_pos:
             seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
+	    last_pos = pos
             if seq:
                 print ">" + id_seq + "\n" + seq
 
