@@ -10,6 +10,7 @@
 #include "../utilities/set.h"
 #include "../utilities/FIFO.h"
 #include "../utilities/argparse.h"
+#include "../utilities/list.h"
 
 #ifdef SILENT
 	#define printf(...)
@@ -47,6 +48,7 @@ int main(int argc, const char * argv[]) {
 	int input_format = 0;
 	const char * input_file = NULL;
 	const char * experiment_file = NULL;
+	const char * adapters_file = NULL;
 	int s = 0;
 	int k = K;
 	int d = 0;
@@ -65,6 +67,7 @@ int main(int argc, const char * argv[]) {
 		OPT_STRING('i', "input", &input_file, "Input file (Control)"),
 		OPT_STRING('e', "experiment", &experiment_file, "Experiment file"),
 		OPT_GROUP("Optional"),
+		OPT_STRING('a', "adapters", &adapters_file, "Adapters file"),
 		OPT_INTEGER('k', "kmer", &k, "kmer length of graph (default 10)"),
 		OPT_INTEGER('N', "num-subs", &num_of_subs, "Accepted substitution in approximate counting (default 2)"),
 		OPT_BOOLEAN('d', "double", &d, "Consider double strand"),
@@ -226,13 +229,7 @@ int main(int argc, const char * argv[]) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
-		/*
-		char * rev_read;
-		if( !(rev_read = (char*)malloc(sizeof(char) * (l+1))) ) {
-			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-			return 1;
-		}
-		*/
+
 		int index;
 		int sublen;
 
@@ -300,13 +297,6 @@ int main(int argc, const char * argv[]) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
-		/*
-		free(rev_read);
-		if( !(rev_read = (char*)malloc(sizeof(char) * (l+1))) ) {
-			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-			return 1;
-		}
-		*/
 
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
@@ -352,6 +342,56 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Processing of Input complete\n");
 	}
+
+	char * kmer;
+	if( !(kmer = (char*)malloc(sizeof(char)*(k+1))) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+
+	//Reading adapters
+	list_t * adapters = NULL;
+	
+	if(adapters_file) {
+		if( !(fp = fopen(adapters_file, "r")) ) {
+			fprintf(stdout, "[ERROR] can't open %s\n", adapters_file);
+			return 1;
+		}
+
+		fgets(buf, BUFFER, fp);
+		i = 0;
+		while(!feof(fp)) {
+			i++;
+			if(i==2) {
+				i=0;
+				l = strlen(buf) - 1;
+				//printf("%s\n", buf);
+
+				for(j=0; j<l-s+1; j++) {
+					strncpy(kmer, buf+j, s);
+					kmer[s] = '\0';
+					adapters = add(adapters, kmer);
+					if(!(adapters) ) {
+						fprintf(stdout, "[ERROR] couldn't allocate memory\n");
+						return 1;
+					}
+				}
+			}
+			fgets(buf, BUFFER, fp);
+		}
+
+		/*
+		list_t * t;
+		t = adapters;
+		while(t) {
+			printf("%s\n", t->str);
+			t = t->next;
+		}
+		*/
+
+		fclose(fp);
+	}
+
 
 	// Getting total
 	unsigned long total = 0;
@@ -441,12 +481,6 @@ int main(int argc, const char * argv[]) {
 		}
 		rev_hash(i, s, smers[i]);
 		//printf("%s\n", smers[i]);
-	}
-
-	char * kmer;
-	if( !(kmer = (char*)malloc(sizeof(char)*(k+1))) ) {
-		fprintf(stdout, "[ERROR] couldn't allocate\n");
-		return 1;
 	}
 
 	char * smer;
@@ -584,6 +618,11 @@ int main(int argc, const char * argv[]) {
 	fprintf(fp, "k-mer\tIP_count\tIP_freq\tInput_count\tInput_freq\tdiff\tdiff_log2\n");
 	for(i=0; i<expected_smer; i++) {
 		rev_hash(i, s, kmer);
+		if( search(adapters, kmer) ) {
+			for(j=0; j<s; j++) {
+				kmer[j] = tolower(kmer[j]);
+			}
+		}
 		freq = (double)counts[i]/(double)total;
 		freq_input = (double)input_counts[i]/(double)total_input;
 		diff = freq/freq_input;
