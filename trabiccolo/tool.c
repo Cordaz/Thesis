@@ -351,7 +351,7 @@ int main(int argc, const char * argv[]) {
 
 	//Reading adapters
 	list_t * adapters = NULL;
-	
+
 	if(adapters_file) {
 		if( !(fp = fopen(adapters_file, "r")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", adapters_file);
@@ -370,10 +370,12 @@ int main(int argc, const char * argv[]) {
 				for(j=0; j<l-s+1; j++) {
 					strncpy(kmer, buf+j, s);
 					kmer[s] = '\0';
-					adapters = add(adapters, kmer);
-					if(!(adapters) ) {
-						fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-						return 1;
+					if(!search(adapters, kmer)) {
+						adapters = add(adapters, kmer);
+						if(!(adapters) ) {
+							fprintf(stdout, "[ERROR] couldn't allocate memory\n");
+							return 1;
+						}
 					}
 				}
 			}
