@@ -15,7 +15,7 @@
 	#define printf(...)
 #endif
 
-#define BUFFER 256
+#define BUFFER 512
 #define MIN_ARGS 2
 #define MAX_SUBS 2
 #define BUILD 1
@@ -26,7 +26,7 @@
 #define K 10
 
 static const char* const usage[] = {
-	"dsc [options] (-p path_pattern | -i input -e experiment) -s search_size",
+	"tool [options] (-p path_pattern | -i input -e experiment) -s search_size",
 	NULL
 };
 
@@ -76,7 +76,7 @@ int main(int argc, const char * argv[]) {
 
 	struct argparse argparse;
 	argparse_init(&argparse, options, usage, 0);
-	argparse_describe(&argparse, "\nSearch for approximate occurences of k-mer of length s in the adjDBG.\nEither specify the pattern of *.graph.* files (Required (1)) or specify Required (2) group", "\nNote that the grah is intended to be structured on k/2");
+	argparse_describe(&argparse, "\nSearch for approximate occurences of k-mer of length s in the adjDBG.\nEither specify the pattern of *.graph.* files (Required (1)) or specify Required (2) group", "\nNote that the graph is intended to be structured on k/2");
 
 	argc = argparse_parse(&argparse, argc, argv);
 
