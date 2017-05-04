@@ -170,31 +170,10 @@ int main(int argc, const char * argv[]) {
 	int edges = (int)pow((double)4, k/2+1);
 	graph_t * dbg;
 
-	unsigned long total;
-	unsigned long total_input;
 	char * token;
 
 	//Either build or load the graph
 	if(build_or_load == LOAD) {
-		strncpy(buf, pattern, BUFFER);
-		strcat(buf, ".graph.other");
-		if( !(fp = fopen(buf, "r")) ) {
-			fprintf(stdout, "[ERROR] can't open %s\n", experiment_file);
-			return 1;
-		}
-		//Read infos
-		fgets(buf, BUFFER, fp);
-		token = strtok(buf, "\t");
-		token = strtok(NULL, "\t");
-		token[strlen(token)-1] = '\0';
-		total = (unsigned long)atoi(token);
-		fgets(buf, BUFFER, fp);
-		token = strtok(buf, "\t");
-		token = strtok(NULL, "\t");
-		token[strlen(token)-1] = '\0';
-		total_input = (unsigned long)atoi(token);
-		fclose(fp);
-
 		dbg = load_graph(pattern, k/2, nodes, edges);
 		if(!dbg) {
 			return 1;
@@ -293,7 +272,6 @@ int main(int argc, const char * argv[]) {
 			}
 			fgets(buf, BUFFER, fp);
 		}
-		total = (unsigned long)read_index;
 
 		fclose(fp);
 
@@ -359,7 +337,6 @@ int main(int argc, const char * argv[]) {
 			}
 			fgets(buf, BUFFER, fp);
 		}
-		total_input = (unsigned long)read_index;
 
 		fclose(fp);
 
@@ -420,6 +397,16 @@ int main(int argc, const char * argv[]) {
 		fclose(fp);
 	}
 
+	// Getting total
+	unsigned long total = 0;
+	unsigned long total_input = 0;
+	for(i=0; i<nodes; i++) {
+		for(j=0; j<nodes; j++) {
+			total += (unsigned long)dbg->nodes[i]->out_kstep[j]->count;
+			total_input += (unsigned long)dbg->nodes[i]->out_kstep[j]->input_count;
+		}
+	}
+
 
 	unsigned long count;
 	unsigned long input_count;
@@ -427,6 +414,7 @@ int main(int argc, const char * argv[]) {
 	double freq_input;
 	double diff;
 	double diff_log2;
+	double entropy;
 
 
 	//estimate number of s-mer
@@ -633,7 +621,7 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
-	fprintf(fp, "k-mer\tIP_count\tIP_freq\tInput_count\tInput_freq\tdiff\tdiff_log2\n");
+	fprintf(fp, "k-mer\tIP_count\tIP_freq\tInput_count\tInput_freq\tdiff\tdiff_log2\tentropy\n");
 	for(i=0; i<expected_smer; i++) {
 		rev_hash(i, s, kmer);
 		if( search(adapters, kmer) ) {
@@ -645,7 +633,8 @@ int main(int argc, const char * argv[]) {
 		freq_input = (double)input_counts[i]/(double)total_input;
 		diff = freq/freq_input;
 		diff_log2 = log2(diff);
-		fprintf(fp, "%s\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\n", kmer, counts[i], freq, input_counts[i], freq_input, diff, diff_log2);
+		entropy = freq* diff_log2;
+		fprintf(fp, "%s\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\t%lf\n", kmer, counts[i], freq, input_counts[i], freq_input, diff, diff_log2, entropy);
 	}
 	fclose(fp);
 
@@ -692,12 +681,7 @@ int main(int argc, const char * argv[]) {
 		timeinfo = localtime ( &rawtime );
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Generating output: graph\n");
-		strncpy(out_file, out_pattern, BUFFER);
-		strcat(out_file, ".graph.other");
-		if( !(fp = fopen(out_file, "w+")) ) {
-			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
-			return 1;
-		}
+		
 		fprintf(fp, "@experiment_size\t%lu\n@input_size\t%lu\n", total, total_input);
 		strncpy(out_file, out_pattern, BUFFER);
 		strcat(out_file, ".graph.nodes");
