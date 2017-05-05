@@ -5,11 +5,13 @@
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
+#include <ctype.h>
 #include "../utilities/data_structures.h"
 #include "../utilities/my_lib.h"
 #include "../utilities/set.h"
 #include "../utilities/FIFO.h"
 #include "../utilities/argparse.h"
+#include "../utilities/list.h"
 
 #ifdef SILENT
 	#define printf(...)
@@ -47,6 +49,7 @@ int main(int argc, const char * argv[]) {
 	int input_format = 0;
 	const char * input_file = NULL;
 	const char * experiment_file = NULL;
+	const char * adapters_file = NULL;
 	int s = 0;
 	int k = K;
 	int d = 0;
@@ -65,6 +68,7 @@ int main(int argc, const char * argv[]) {
 		OPT_STRING('i', "input", &input_file, "Input file (Control)"),
 		OPT_STRING('e', "experiment", &experiment_file, "Experiment file"),
 		OPT_GROUP("Optional"),
+		OPT_STRING('a', "adapters", &adapters_file, "Adapters file"),
 		OPT_INTEGER('k', "kmer", &k, "kmer length of graph (default 10)"),
 		OPT_INTEGER('N', "num-subs", &num_of_subs, "Accepted substitution in approximate counting (default 2)"),
 		OPT_BOOLEAN('d', "double", &d, "Consider double strand"),
@@ -166,6 +170,8 @@ int main(int argc, const char * argv[]) {
 	int edges = (int)pow((double)4, k/2+1);
 	graph_t * dbg;
 
+	char * token;
+
 	//Either build or load the graph
 	if(build_or_load == LOAD) {
 		dbg = load_graph(pattern, k/2, nodes, edges);
@@ -226,13 +232,7 @@ int main(int argc, const char * argv[]) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
-		/*
-		char * rev_read;
-		if( !(rev_read = (char*)malloc(sizeof(char) * (l+1))) ) {
-			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-			return 1;
-		}
-		*/
+
 		int index;
 		int sublen;
 
@@ -300,13 +300,6 @@ int main(int argc, const char * argv[]) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
-		/*
-		free(rev_read);
-		if( !(rev_read = (char*)malloc(sizeof(char) * (l+1))) ) {
-			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
-			return 1;
-		}
-		*/
 
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
@@ -353,6 +346,57 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "Processing of Input complete\n");
 	}
 
+	char * kmer;
+	if( !(kmer = (char*)malloc(sizeof(char)*(k+1))) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+
+	//Reading adapters
+	list_t * adapters = NULL;
+
+	if(adapters_file) {
+		if( !(fp = fopen(adapters_file, "r")) ) {
+			fprintf(stdout, "[ERROR] can't open %s\n", adapters_file);
+			return 1;
+		}
+
+		fgets(buf, BUFFER, fp);
+		i = 0;
+		while(!feof(fp)) {
+			i++;
+			if(i==2) {
+				i=0;
+				l = strlen(buf) - 1;
+				//printf("%s\n", buf);
+
+				for(j=0; j<l-s+1; j++) {
+					strncpy(kmer, buf+j, s);
+					kmer[s] = '\0';
+					if(!search(adapters, kmer)) {
+						adapters = add(adapters, kmer);
+						if(!(adapters) ) {
+							fprintf(stdout, "[ERROR] couldn't allocate memory\n");
+							return 1;
+						}
+					}
+				}
+			}
+			fgets(buf, BUFFER, fp);
+		}
+
+		/*
+		list_t * t;
+		t = adapters;
+		while(t) {
+			printf("%s\n", t->str);
+			t = t->next;
+		}
+		*/
+
+		fclose(fp);
+	}
+
 	// Getting total
 	unsigned long total = 0;
 	unsigned long total_input = 0;
@@ -363,12 +407,14 @@ int main(int argc, const char * argv[]) {
 		}
 	}
 
+
 	unsigned long count;
 	unsigned long input_count;
 	double freq;
 	double freq_input;
 	double diff;
 	double diff_log2;
+	double entropy;
 
 
 	//estimate number of s-mer
@@ -441,12 +487,6 @@ int main(int argc, const char * argv[]) {
 		}
 		rev_hash(i, s, smers[i]);
 		//printf("%s\n", smers[i]);
-	}
-
-	char * kmer;
-	if( !(kmer = (char*)malloc(sizeof(char)*(k+1))) ) {
-		fprintf(stdout, "[ERROR] couldn't allocate\n");
-		return 1;
 	}
 
 	char * smer;
@@ -581,14 +621,20 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
-	fprintf(fp, "k-mer\tIP_count\tIP_freq\tInput_count\tInput_freq\tdiff\tdiff_log2\n");
+	fprintf(fp, "k-mer\tIP_count\tIP_freq\tInput_count\tInput_freq\tdiff\tdiff_log2\tentropy\n");
 	for(i=0; i<expected_smer; i++) {
 		rev_hash(i, s, kmer);
+		if( search(adapters, kmer) ) {
+			for(j=0; j<s; j++) {
+				kmer[j] = tolower(kmer[j]);
+			}
+		}
 		freq = (double)counts[i]/(double)total;
 		freq_input = (double)input_counts[i]/(double)total_input;
 		diff = freq/freq_input;
 		diff_log2 = log2(diff);
-		fprintf(fp, "%s\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\n", kmer, counts[i], freq, input_counts[i], freq_input, diff, diff_log2);
+		entropy = freq* diff_log2;
+		fprintf(fp, "%s\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\t%lf\n", kmer, counts[i], freq, input_counts[i], freq_input, diff, diff_log2, entropy);
 	}
 	fclose(fp);
 
@@ -635,6 +681,8 @@ int main(int argc, const char * argv[]) {
 		timeinfo = localtime ( &rawtime );
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Generating output: graph\n");
+		
+		fprintf(fp, "@experiment_size\t%lu\n@input_size\t%lu\n", total, total_input);
 		strncpy(out_file, out_pattern, BUFFER);
 		strcat(out_file, ".graph.nodes");
 		FILE * fp_nodes;
