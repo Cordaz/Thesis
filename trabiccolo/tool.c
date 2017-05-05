@@ -681,8 +681,6 @@ int main(int argc, const char * argv[]) {
 		timeinfo = localtime ( &rawtime );
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Generating output: graph\n");
-		
-		fprintf(fp, "@experiment_size\t%lu\n@input_size\t%lu\n", total, total_input);
 		strncpy(out_file, out_pattern, BUFFER);
 		strcat(out_file, ".graph.nodes");
 		FILE * fp_nodes;
