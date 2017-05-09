@@ -167,7 +167,7 @@ int main(int argc, const char * argv[]) {
 	if(psm_arg) {
 		fprintf(stdout, "                  @output psm\n");
 	}
-	if(g) {
+	if(g_arg) {
 		fprintf(stdout, "                  @output graph\n");
 	}
 
@@ -175,8 +175,6 @@ int main(int argc, const char * argv[]) {
 	int nodes = (int)pow((double)4, k/2);
 	int edges = (int)pow((double)4, k/2+1);
 	graph_t * dbg;
-
-	char * token;
 
 	//Either build or load the graph
 	if(build_or_load == LOAD) {
@@ -496,6 +494,13 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
+	int dim2 = 1 + 3*s + 3*s/2 * 3*(s-1);
+	set_t * already_computed;
+	if( !(already_computed = initialize_set(dim2, s)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+
 
 	char ** smers;
 	if( !(smers = (char**)malloc(sizeof(char*) * (expected_smer) )) ) {
@@ -541,12 +546,14 @@ int main(int argc, const char * argv[]) {
 	//Approximate counting and psm
 	for(i=0; i<expected_smer; i++) {
 		clear(subs_reserve);
+		clear(already_computed);
 		put(subs_reserve, smers[i]);
 		for(g=0; g <= num_of_subs; g++) {
 			clear(subs);
 			flag0 = get(subs_reserve, smer);
 			while( flag0 != -1 ) {
 
+				put(already_computed, smer);
 				//printf("\t%s\n", smer);
 				clear(q);
 
@@ -574,14 +581,13 @@ int main(int argc, const char * argv[]) {
 							psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
 						}
 					}
-
 					flag2 = get(q, kmer);
 				}
 
 				//REVERSE
 				if(d) {
 					reverse_kmer(smer, rev_smer, s);
-					if(!is_palyndrome(smer, rev_smer)) {
+					if(!is_in(already_computed, rev_smer)/*!is_palyndrome(smer, rev_smer)*/) {
 						clear(q);
 
 						if( !(q = extend_right(q, rev_smer, k-s, k)) ) {
@@ -633,89 +639,6 @@ int main(int argc, const char * argv[]) {
 			}
 		}
 
-		/*
-		clear(subs);
-		//printf("%s\n", smers[i]);
-		put(subs, smers[i]);
-		if( !(subs = substitute(subs, smers[i], s, 0, num_of_subs)) ) {
-			fprintf(stdout, "[ERROR] queue is not working\n");
-			return 1;
-		}
-		flag = get(subs, smer);
-		while( flag != -1 ) {
-			//printf("\t%s\n", smer);
-			clear(q);
-
-			if( !(q = extend_right(q, smer, k-s, k)) ) {
-				fprintf(stdout, "[ERROR] couldn't allocate\n");
-				return 1;
-			}
-			flag2 = get(q, kmer);
-			while( flag2 != -1 ) {
-				//printf("%s\t", kmer);
-				strncpy(half0, kmer, k/2);
-				strncpy(half1, kmer+k/2, k/2);
-				hash_half0 = hash(half0, k/2);
-				hash_half1 = hash(half1, k/2);
-				//printf("%s\t%s\t", half0, half1);
-				count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-				input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
-				freq = (double)count/total;
-				freq_input = (double)input_count/total_input;
-				diff = freq / freq_input;
-				if(diff >= 1) {
-					counts[i] += count;
-					input_counts[i] += input_count;
-					for(j=0; j<s; j++) {
-						psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-					}
-				}
-
-				flag2 = get(q, kmer);
-			}
-
-			//REVERSE
-			if(d) {
-				reverse_kmer(smer, rev_smer, s);
-				if(!is_palyndrome(smer, rev_smer)) {
-					clear(q);
-
-					if( !(q = extend_right(q, rev_smer, k-s, k)) ) {
-						fprintf(stdout, "[ERROR] couldn't allocate\n");
-						return 1;
-					}
-					flag2 = get(q, kmer);
-					while( flag2 != -1 ) {
-						//printf("%s\t", kmer);
-						strncpy(half0, kmer, k/2);
-						strncpy(half1, kmer+k/2, k/2);
-						hash_half0 = hash(half0, k/2);
-						hash_half1 = hash(half1, k/2);
-						//printf("%s\t%s\t", half0, half1);
-						count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-						input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
-						freq = (double)count/total;
-						freq_input = (double)input_count/total_input;
-						diff = freq / freq_input;
-						if(diff >= 1) {
-							counts[i] += count;
-							input_counts[i] += input_count;
-							for(j=0; j<s; j++) {
-								psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-							}
-						}
-
-						flag2 = get(q, kmer);
-					}
-				}
-			}
-			//END REVERSE
-
-			flag = get(subs, smer);
-		}
-		*/
-
-		//printf("%d\t%s\t%lu\t%lu\n", i, smers[i], counts[i], input_counts[i]);
 	}
 
 
@@ -739,12 +662,17 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
+	double sum_of_entropy;
+
 	fprintf(fp, "k-mer\tIP_count_0\tIP_freq_0\tInput_count_0\tInput_freq_0\tdiff_0\tdiff_log2_0\tentropy_0");
 	if(g >= 1) {
 		fprintf(fp, "\tIP_count_1\tIP_freq_1\tInput_count_1\tInput_freq_1\tdiff_1\tdiff_log2_1\tentropy_1");
 	}
 	if(g >= 2) {
 		fprintf(fp, "\tIP_count_2\tIP_freq_2\tInput_count_2\tInput_freq_2\tdiff_2\tdiff_log2_2\tentropy_2");
+	}
+	if(g >= 1) {
+		fprintf(fp, "\tsum_of_entropy");
 	}
 	fprintf(fp, "\n");
 	for(i=0; i<expected_smer; i++) {
@@ -754,6 +682,7 @@ int main(int argc, const char * argv[]) {
 				kmer[j] = tolower(kmer[j]);
 			}
 		}
+		sum_of_entropy = 0.0;
 		fprintf(fp, "%s", kmer);
 		for(g=0; g <= num_of_subs; g++) {
 			freq = (double)counts[i][g]/(double)total;
@@ -761,8 +690,11 @@ int main(int argc, const char * argv[]) {
 			diff = freq/freq_input;
 			diff_log2 = log2(diff);
 			entropy = freq* diff_log2;
+			sum_of_entropy = sum_of_entropy + entropy;
 			fprintf(fp, "\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\t%lf", counts[i][g], freq, input_counts[i][g], freq_input, diff, diff_log2, entropy);
 		}
+		fprintf(fp, "\t%lf", sum_of_entropy);
+
 		fprintf(fp, "\n");
 
 	}
