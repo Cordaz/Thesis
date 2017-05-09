@@ -56,7 +56,7 @@ int main(int argc, const char * argv[]) {
 	int l;
 	int num_of_subs = 2;
 	int psm_arg = 0;
-	int g = 0;
+	int g_arg = 0;
 	int build_or_load = 0;
 	struct argparse_option options[] = {
 		OPT_HELP(),
@@ -70,11 +70,11 @@ int main(int argc, const char * argv[]) {
 		OPT_GROUP("Optional"),
 		OPT_STRING('a', "adapters", &adapters_file, "Adapters file"),
 		OPT_INTEGER('k', "kmer", &k, "kmer length of graph (default 10)"),
-		OPT_INTEGER('N', "num-subs", &num_of_subs, "Accepted substitution in approximate counting (default 2)"),
+		OPT_INTEGER('N', "num-subs", &num_of_subs, "Accepted substitution in approximate counting (default 2, maximum 2)"),
 		OPT_BOOLEAN('d', "double", &d, "Consider double strand"),
 		OPT_BOOLEAN('m', "psm", &psm_arg, "output Position Specific Matrix ext='.psm'"),
 		OPT_STRING('n', "name", &out_p, "pattern to name output file (default 'pid.out')"),
-		OPT_BOOLEAN('g', "graph", &g, "output graph (of experiment) ext='.graph'"),
+		OPT_BOOLEAN('g', "graph", &g_arg, "output graph (of experiment) ext='.graph'"),
 		OPT_END()
 	};
 
@@ -91,6 +91,12 @@ int main(int argc, const char * argv[]) {
 	}
 	if( s <= k/2 || s > k ) {
 		fprintf(stdout, "[ERROR] search size must be in k/2 < s <= k\n\n");
+		argparse_usage(&argparse);
+		return 0;
+	}
+
+	if(num_of_subs > 2) {
+		fprintf(stdout, "[ERROR] maximum number of accepted substitution must be <= 2\n\n");
 		argparse_usage(&argparse);
 		return 0;
 	}
@@ -126,7 +132,7 @@ int main(int argc, const char * argv[]) {
 
 	FILE * fp;
 	char buf[BUFFER+1];
-	int i, j, h;
+	int i, j, h, g;
 
 	char out_pattern[BUFFER+1];
 	if(!out_p) {
@@ -444,20 +450,29 @@ int main(int argc, const char * argv[]) {
 	}
 
 	//Counters
-	unsigned long * counts;
-	if( !(counts = (unsigned long*)malloc(sizeof(unsigned long) * expected_smer)) ) {
+	unsigned long ** counts;
+	if( !(counts = (unsigned long**)malloc(sizeof(unsigned long*) * expected_smer)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
-	unsigned long * input_counts;
-	if( !(input_counts = (unsigned long*)malloc(sizeof(unsigned long) * expected_smer)) ) {
+	unsigned long ** input_counts;
+	if( !(input_counts = (unsigned long**)malloc(sizeof(unsigned long*) * expected_smer)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
 	for(i=0; i<expected_smer; i++) {
-		counts[i] = 1;
-		input_counts[i] = 1;
-		//Pseudo-count
+		if( !(counts[i] = (unsigned long*)malloc(sizeof(unsigned long) * (num_of_subs + 1))) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate\n");
+			return 1;
+		}
+		if( !(input_counts[i] = (unsigned long*)malloc(sizeof(unsigned long) * (num_of_subs + 1))) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate\n");
+			return 1;
+		}
+		for(j=0; j<num_of_subs; j++) {
+			counts[i][j] = 1;
+			input_counts[i][j] = 1;
+		}
 	}
 
 	int q_len = (int)pow( (double)4, k-s );
@@ -467,9 +482,16 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
-	int dim = 1 + 3*s + 3*s/2 * 3*(s-1);
+	//int dim = 1 + 3*s + 3*s/2 * 3*(s-1);
+	int dim = 3*s * 3*s;
 	set_t * subs;
 	if( !(subs = initialize_set(dim, s)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+
+	set_t * subs_reserve;
+	if( !(subs_reserve = initialize_set(dim, s)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
@@ -512,11 +534,106 @@ int main(int argc, const char * argv[]) {
 	}
 	int hash_half0, hash_half1;
 
+	int flag0;
 	int flag;
 	int flag2;
 
 	//Approximate counting and psm
 	for(i=0; i<expected_smer; i++) {
+		clear(subs_reserve);
+		put(subs_reserve, smers[i]);
+		for(g=0; g <= num_of_subs; g++) {
+			clear(subs);
+			flag0 = get(subs_reserve, smer);
+			while( flag0 != -1 ) {
+
+				//printf("\t%s\n", smer);
+				clear(q);
+
+				if( !(q = extend_right(q, smer, k-s, k)) ) {
+					fprintf(stdout, "[ERROR] couldn't allocate\n");
+					return 1;
+				}
+				flag2 = get(q, kmer);
+				while( flag2 != -1 ) {
+					//printf("%s\t", kmer);
+					strncpy(half0, kmer, k/2);
+					strncpy(half1, kmer+k/2, k/2);
+					hash_half0 = hash(half0, k/2);
+					hash_half1 = hash(half1, k/2);
+					//printf("%s\t%s\t", half0, half1);
+					count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+					input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+					freq = (double)count/total;
+					freq_input = (double)input_count/total_input;
+					diff = freq / freq_input;
+					if(diff >= 1) {
+						counts[i][g] += count;
+						input_counts[i][g] += input_count;
+						for(j=0; j<s; j++) {
+							psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+						}
+					}
+
+					flag2 = get(q, kmer);
+				}
+
+				//REVERSE
+				if(d) {
+					reverse_kmer(smer, rev_smer, s);
+					if(!is_palyndrome(smer, rev_smer)) {
+						clear(q);
+
+						if( !(q = extend_right(q, rev_smer, k-s, k)) ) {
+							fprintf(stdout, "[ERROR] couldn't allocate\n");
+							return 1;
+						}
+						flag2 = get(q, kmer);
+						while( flag2 != -1 ) {
+							//printf("%s\t", kmer);
+							strncpy(half0, kmer, k/2);
+							strncpy(half1, kmer+k/2, k/2);
+							hash_half0 = hash(half0, k/2);
+							hash_half1 = hash(half1, k/2);
+							//printf("%s\t%s\t", half0, half1);
+							count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+							input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+							freq = (double)count/total;
+							freq_input = (double)input_count/total_input;
+							diff = freq / freq_input;
+							if(diff >= 1) {
+								counts[i][g] += count;
+								input_counts[i][g] += input_count;
+								for(j=0; j<s; j++) {
+									psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+								}
+							}
+
+							flag2 = get(q, kmer);
+						}
+					}
+				}
+				//END REVERSE
+
+				if(g != num_of_subs) {
+					if( !(subs = substitute(subs, smer, s, 0, 1)) ) {
+						fprintf(stdout, "[ERROR] queue is not working\n");
+						return 1;
+					}
+				}
+
+				flag0 = get(subs_reserve, smer);
+			}
+
+			clear(subs_reserve);
+			flag0 = get(subs, smer);
+			while( flag0 != -1 ) {
+				put(subs_reserve, smer);
+				flag0 = get(subs, smer);
+			}
+		}
+
+		/*
 		clear(subs);
 		//printf("%s\n", smers[i]);
 		put(subs, smers[i]);
@@ -596,6 +713,7 @@ int main(int argc, const char * argv[]) {
 
 			flag = get(subs, smer);
 		}
+		*/
 
 		//printf("%d\t%s\t%lu\t%lu\n", i, smers[i], counts[i], input_counts[i]);
 	}
@@ -621,7 +739,14 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
-	fprintf(fp, "k-mer\tIP_count\tIP_freq\tInput_count\tInput_freq\tdiff\tdiff_log2\tentropy\n");
+	fprintf(fp, "k-mer\tIP_count_0\tIP_freq_0\tInput_count_0\tInput_freq_0\tdiff_0\tdiff_log2_0\tentropy_0");
+	if(g >= 1) {
+		fprintf(fp, "\tIP_count_1\tIP_freq_1\tInput_count_1\tInput_freq_1\tdiff_1\tdiff_log2_1\tentropy_1");
+	}
+	if(g >= 2) {
+		fprintf(fp, "\tIP_count_2\tIP_freq_2\tInput_count_2\tInput_freq_2\tdiff_2\tdiff_log2_2\tentropy_2");
+	}
+	fprintf(fp, "\n");
 	for(i=0; i<expected_smer; i++) {
 		rev_hash(i, s, kmer);
 		if( search(adapters, kmer) ) {
@@ -629,12 +754,17 @@ int main(int argc, const char * argv[]) {
 				kmer[j] = tolower(kmer[j]);
 			}
 		}
-		freq = (double)counts[i]/(double)total;
-		freq_input = (double)input_counts[i]/(double)total_input;
-		diff = freq/freq_input;
-		diff_log2 = log2(diff);
-		entropy = freq* diff_log2;
-		fprintf(fp, "%s\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\t%lf\n", kmer, counts[i], freq, input_counts[i], freq_input, diff, diff_log2, entropy);
+		fprintf(fp, "%s", kmer);
+		for(g=0; g <= num_of_subs; g++) {
+			freq = (double)counts[i][g]/(double)total;
+			freq_input = (double)input_counts[i][g]/(double)total_input;
+			diff = freq/freq_input;
+			diff_log2 = log2(diff);
+			entropy = freq* diff_log2;
+			fprintf(fp, "\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\t%lf", counts[i][g], freq, input_counts[i][g], freq_input, diff, diff_log2, entropy);
+		}
+		fprintf(fp, "\n");
+
 	}
 	fclose(fp);
 
@@ -676,7 +806,7 @@ int main(int argc, const char * argv[]) {
 	}
 
 	//Output graph
-	if(g) {
+	if(g_arg) {
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);

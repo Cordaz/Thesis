@@ -10,10 +10,6 @@
 
 	int search(list_t *, char *);
 
-<<<<<<< HEAD
-	void free(list_t *);
-=======
 	void free_list(list_t *);
->>>>>>> adapters
 
 #endif
