@@ -52,7 +52,7 @@ int main(int argc, const char * argv[]) {
 	const char * adapters_file = NULL;
 	int s = 0;
 	int k = K;
-	int d = 0;
+	int S = 0;
 	int l;
 	int num_of_subs = 2;
 	int psm_arg = 0;
@@ -71,7 +71,7 @@ int main(int argc, const char * argv[]) {
 		OPT_STRING('a', "adapters", &adapters_file, "Adapters file"),
 		OPT_INTEGER('k', "kmer", &k, "kmer length of graph (default 10)"),
 		OPT_INTEGER('N', "num-subs", &num_of_subs, "Accepted substitution in approximate counting (default 2, maximum 2)"),
-		OPT_BOOLEAN('d', "double", &d, "Consider double strand"),
+		OPT_BOOLEAN('S', "single", &S, "Consider single strand only"),
 		OPT_BOOLEAN('m', "psm", &psm_arg, "output Position Specific Matrix ext='.psm'"),
 		OPT_STRING('n', "name", &out_p, "pattern to name output file (default 'pid.out')"),
 		OPT_BOOLEAN('g', "graph", &g_arg, "output graph (of experiment) ext='.graph'"),
@@ -155,10 +155,10 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "                  @params input '%s'\n", input_file);
 		fprintf(stdout, "                  @params experiment '%s'\n", experiment_file);
 	}
-	if(d) {
-		fprintf(stdout, "                  @params d 'true'\n");
+	if(S) {
+		fprintf(stdout, "                  @params S 'true'\n");
 	} else {
-		fprintf(stdout, "                  @params d 'false'\n");
+		fprintf(stdout, "                  @params S 'false'\n");
 	}
 	fprintf(stdout, "                  @params k %d\n", k);
 	fprintf(stdout, "                  @params N %d\n", num_of_subs);
@@ -585,7 +585,7 @@ int main(int argc, const char * argv[]) {
 				}
 
 				//REVERSE
-				if(d) {
+				if(!S) {
 					reverse_kmer(smer, rev_smer, s);
 					if(!is_in(already_computed, rev_smer)/*!is_palyndrome(smer, rev_smer)*/) {
 						clear(q);
