@@ -494,12 +494,14 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
+	/*
 	int dim2 = 1 + 3*s + 3*s/2 * 3*(s-1);
 	set_t * already_computed;
 	if( !(already_computed = initialize_set(dim2, s)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
+	*/
 
 
 	char ** smers;
@@ -546,14 +548,14 @@ int main(int argc, const char * argv[]) {
 	//Approximate counting and psm
 	for(i=0; i<expected_smer; i++) {
 		clear(subs_reserve);
-		clear(already_computed);
+		//clear(already_computed);
 		put(subs_reserve, smers[i]);
 		for(g=0; g <= num_of_subs; g++) {
 			clear(subs);
 			flag0 = get(subs_reserve, smer);
 			while( flag0 != -1 ) {
 
-				put(already_computed, smer);
+				//put(already_computed, smer);
 				//printf("\t%s\n", smer);
 				clear(q);
 
@@ -587,7 +589,7 @@ int main(int argc, const char * argv[]) {
 				//REVERSE
 				if(!S) {
 					reverse_kmer(smer, rev_smer, s);
-					if(!is_in(already_computed, rev_smer)/*!is_palyndrome(smer, rev_smer)*/) {
+					if(/*!is_in(already_computed, rev_smer)*/!is_palyndrome(smer, rev_smer)) {
 						clear(q);
 
 						if( !(q = extend_right(q, rev_smer, k-s, k)) ) {
