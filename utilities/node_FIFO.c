@@ -1,13 +1,13 @@
-#include "FIFO.h"
+#include "node_FIFO.h"
 #include <stdlib.h>
 
-fifo_t * init_queue(int l) {
-	fifo_t * q;
+node_FIFO_t * init_queue(int l) {
+	node_FIFO_t * q;
 	elem_t * e;
 	elem_t * new;
 	int i;
 
-	if( !(q = (fifo_t*)malloc(sizeof(fifo_t))) ) {
+	if( !(q = (node_FIFO_t*)malloc(sizeof(node_FIFO_t))) ) {
 		return NULL;
 	}
 
@@ -32,7 +32,7 @@ fifo_t * init_queue(int l) {
 }
 
 
-node_t * dequeue(fifo_t * q) {
+node_t * dequeue(node_FIFO_t * q) {
 	node_t * n = q->first->n;
 	q->first = (q->first)->next;
 
@@ -40,7 +40,7 @@ node_t * dequeue(fifo_t * q) {
 }
 
 
-fifo_t * enqueue(fifo_t * q, node_t * n) {
+node_FIFO_t * enqueue(node_FIFO_t * q, node_t * n) {
 	q->last->next->n = n;
 	q->last = q->last->next;
 	return q;

@@ -8,8 +8,8 @@
 #include <ctype.h>
 #include "../utilities/data_structures.h"
 #include "../utilities/my_lib.h"
-#include "../utilities/set.h"
-#include "../utilities/FIFO.h"
+#include "../utilities/string_FIFO.h"
+#include "../utilities/node_FIFO.h"
 #include "../utilities/argparse.h"
 #include "../utilities/list.h"
 
@@ -33,11 +33,11 @@ static const char* const usage[] = {
 };
 
 graph_t * load_graph(const char *, int, int, int);
-set_t * extend_right(set_t *, char *, int, int);
+string_FIFO_t * extend_right(string_FIFO_t *, char *, int, int);
 
 graph_t * build_graph(double, double, int);
-int map_read(char *, int, int, graph_t *, fifo_t *, int *, int);
-int map_input_read(char *, int, int, graph_t *, fifo_t *, int *, int);
+int map_read(char *, int, int, graph_t *, node_FIFO_t *, int *, int);
+int map_input_read(char *, int, int, graph_t *, node_FIFO_t *, int *, int);
 node_t * get_successor(node_t *, int, char);
 
 FILE * get_file_info(FILE *, int *, int *);
@@ -211,7 +211,7 @@ int main(int argc, const char * argv[]) {
 
 		int read_index;
 
-		fifo_t * q;
+		node_FIFO_t * q;
 		if ( !(q = init_queue(k/2)) ) {
 			fprintf(stdout, "[ERROR] couldn't allocate\n");
 			return 1;
@@ -474,7 +474,7 @@ int main(int argc, const char * argv[]) {
 	}
 
 	int q_len = (int)pow( (double)4, k-s );
-	set_t * q;
+	string_FIFO_t * q;
 	if( !(q = initialize_set(q_len, k)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
@@ -482,13 +482,13 @@ int main(int argc, const char * argv[]) {
 
 	//int dim = 1 + 3*s + 3*s/2 * 3*(s-1);
 	int dim = 3*s * 3*s;
-	set_t * subs;
+	string_FIFO_t * subs;
 	if( !(subs = initialize_set(dim, s)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
 
-	set_t * subs_reserve;
+	string_FIFO_t * subs_reserve;
 	if( !(subs_reserve = initialize_set(dim, s)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
@@ -496,7 +496,7 @@ int main(int argc, const char * argv[]) {
 
 	/*
 	int dim2 = 1 + 3*s + 3*s/2 * 3*(s-1);
-	set_t * already_computed;
+	string_FIFO_t * already_computed;
 	if( !(already_computed = initialize_set(dim2, s)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
@@ -948,7 +948,7 @@ graph_t * load_graph(const char * pattern, int k, int nodes, int edges) {
 	return dbg;
 }
 
-set_t * extend_right(set_t * q, char * str, int times, int l) {
+string_FIFO_t * extend_right(string_FIFO_t * q, char * str, int times, int l) {
 	if (times == 0) {
 		put(q, str);
 		return q;
@@ -978,7 +978,7 @@ set_t * extend_right(set_t * q, char * str, int times, int l) {
 	return q;
 }
 
-int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q, int * last_seen, int read_index) {
+int map_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, int * last_seen, int read_index) {
 	int i;
 	int fullhash;
 	node_t * n = dbg->nodes[hash(read, k/2)]; //Get starting node
@@ -1007,7 +1007,7 @@ int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q, int * last_se
 	return 0;
 }
 
-int map_input_read(char * read, int l, int k, graph_t * dbg, fifo_t * q, int * last_seen, int read_index) {
+int map_input_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, int * last_seen, int read_index) {
 	int i;
 	int fullhash;
 	node_t * n = dbg->nodes[hash(read, k/2)]; //Get starting node

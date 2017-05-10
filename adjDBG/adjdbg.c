@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include "../utilities/data_structures.h"
 #include "../utilities/my_lib.h"
-#include "../utilities/FIFO.h"
+#include "../utilities/node_FIFO.h"
 #include "../utilities/argparse.h"
 
 #ifdef SILENT
@@ -41,8 +41,8 @@ static const char* const usage[] = {
 ///////// FUNCTIONS PROTOTYPES
 
 graph_t * build_graph(double, double, int);
-int map_read(char *, int, int, graph_t *, fifo_t *);
-int map_input_read(char *, int, int, graph_t *, fifo_t *);
+int map_read(char *, int, int, graph_t *, node_FIFO_t *);
+int map_input_read(char *, int, int, graph_t *, node_FIFO_t *);
 node_t * get_successor(node_t *, int, char);
 
 
@@ -152,7 +152,7 @@ int main (int argc, const char * argv[]) {
 	fprintf(stdout, "                  created %d %d-step edges\n", (int)(nodes*nodes), k/2);
 
 	//// INIT QUEUE
-	fifo_t * q;
+	node_FIFO_t * q;
 	if ( !(q = init_queue(k/2)) ) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
@@ -629,7 +629,7 @@ int main (int argc, const char * argv[]) {
 
 //////////////////////// FUNCTIONS
 
-int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
+int map_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q) {
 	int i;
 	node_t * n = dbg->nodes[hash(read, k/2)]; //Get starting node
 	node_t * n0;
@@ -653,7 +653,7 @@ int map_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
 	return 0;
 }
 
-int map_input_read(char * read, int l, int k, graph_t * dbg, fifo_t * q) {
+int map_input_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q) {
 	int i;
 	node_t * n = dbg->nodes[hash(read, k/2)]; //Get starting node
 	node_t * n0;

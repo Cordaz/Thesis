@@ -1,13 +1,13 @@
-#include "set.h"
+#include "string_FIFO.h"
 #include <malloc.h>
 #include <string.h>
 
-set_t * initialize_set(int dim, int k) {
+string_FIFO_t * initialize_set(int dim, int k) {
 	int i;
 
-	set_t * q;
+	string_FIFO_t * q;
 
-	if( !(q = (set_t*)malloc(sizeof(set_t))) ) {
+	if( !(q = (string_FIFO_t*)malloc(sizeof(string_FIFO_t))) ) {
 		return NULL;
 	}
 
@@ -28,11 +28,11 @@ set_t * initialize_set(int dim, int k) {
 	return q;
 }
 
-int is_empty(set_t * q) {
+int is_empty(string_FIFO_t * q) {
 	return q->valid_items == 0 ? 1 : 0;
 }
 
-int put(set_t * q, char * str) {
+int put(string_FIFO_t * q, char * str) {
 	if(q->valid_items == q->dim)
 		return -1; //Full
 
@@ -43,7 +43,7 @@ int put(set_t * q, char * str) {
 	return 0;
 }
 
-int get(set_t * q, char * str) {
+int get(string_FIFO_t * q, char * str) {
 	if(q->valid_items == 0)
 		return -1; //Empty
 
@@ -54,7 +54,7 @@ int get(set_t * q, char * str) {
 	return 0;
 }
 
-void free_set(set_t * q) {
+void free_set(string_FIFO_t * q) {
 	int i;
 	for(i=0; i<q->dim; i++) {
 		free(q->data[i]);
@@ -63,7 +63,7 @@ void free_set(set_t * q) {
 	free(q);
 }
 
-int is_in(set_t * q, char * str) {
+int is_in(string_FIFO_t * q, char * str) {
 	if(q->valid_items == 0)
 		return 0;
 
@@ -78,7 +78,7 @@ int is_in(set_t * q, char * str) {
 	return 0;
 }
 
-void clear(set_t * q) {
+void clear(string_FIFO_t * q) {
 	q->first = 0;
 	q->last = 0;
 	q->valid_items = 0;

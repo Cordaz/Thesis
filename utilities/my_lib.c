@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <math.h>
-#include "set.h"
+#include "string_FIFO.h"
 
 const char bases[4] = {'A', 'C', 'G', 'T'};
 
@@ -160,7 +160,7 @@ void substitute_all(char * kmer, char ** substituted, int k) {
 	}
 }
 
-set_t * substitute(set_t * set, char * kmer, int k, int start, int times) {
+string_FIFO_t * substitute(string_FIFO_t * set, char * kmer, int k, int start, int times) {
 	if(times == 0) {
 		//put(set, kmer);
 		return set;

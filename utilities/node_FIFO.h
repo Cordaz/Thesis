@@ -8,15 +8,15 @@
 		struct elem_s * next;
 	} elem_t;
 
-	typedef struct fifo_s {
+	typedef struct node_FIFO_s {
 		elem_t * first;
 		elem_t * last;
-	} fifo_t;
+	} node_FIFO_t;
 
-	fifo_t * init_queue(int);
+	node_FIFO_t * init_queue(int);
 
-	node_t * dequeue(fifo_t *);
+	node_t * dequeue(node_FIFO_t *);
 
-	fifo_t * enqueue(fifo_t *, node_t *);
+	node_FIFO_t * enqueue(node_FIFO_t *, node_t *);
 
 #endif

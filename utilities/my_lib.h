@@ -1,7 +1,7 @@
 #ifndef MYLIB_H
 	#define MYLIB_H
 
-	#include "set.h"
+	#include "string_FIFO.h"
 
 	/*
 	 * Hash the string (of length passed after) passed as argument as:
@@ -70,7 +70,7 @@
 	 * Add all substituted to a preallocated set, doesn't add the original one.
 	 *
 	 */
-	set_t * substitute(set_t *, char *, int, int, int);
+	string_FIFO_t * substitute(string_FIFO_t *, char *, int, int, int);
 
 
 	/*
