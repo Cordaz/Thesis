@@ -40,7 +40,7 @@ int map_read(char *, int, int, graph_t *, node_FIFO_t *, int *, int);
 int map_input_read(char *, int, int, graph_t *, node_FIFO_t *, int *, int);
 node_t * get_successor(node_t *, int, char);
 
-FILE * get_file_info(FILE *, int *, int *);
+FILE * get_file_info(FILE *, int *);
 
 int main(int argc, const char * argv[]) {
 	//Setup
@@ -223,7 +223,7 @@ int main(int argc, const char * argv[]) {
 		}
 
 		int skip_line;
-		if( !(fp = get_file_info(fp, &input_format, &l)) ) {
+		if( !(fp = get_file_info(fp, &input_format)) ) {
 			return 1;
 		}
 		if (input_format == FASTA)
@@ -232,7 +232,7 @@ int main(int argc, const char * argv[]) {
 			skip_line = 4;
 
 		char * read;
-		if( !(read = (char*)malloc(sizeof(char) * (l+1))) ) {
+		if( !(read = (char*)malloc(sizeof(char) * (BUFFER+1))) ) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
@@ -257,7 +257,8 @@ int main(int argc, const char * argv[]) {
 			i++;
 			if(i==2) {
 				//This line has the read
-				strncpy(read, buf, l); //Remove '\n', ensure length
+				strncpy(read, buf, BUFFER);
+				l = strlen(read) - 1;  //Remove '\n', ensure length
 				read[l] = '\0';
 				//printf("%s\n", read);
 				index = 0;
@@ -291,7 +292,7 @@ int main(int argc, const char * argv[]) {
 			return 1;
 		}
 
-		if( !(fp = get_file_info(fp, &input_format, &l)) ) {
+		if( !(fp = get_file_info(fp, &input_format)) ) {
 			return 1;
 		}
 		if (input_format == FASTA)
@@ -300,7 +301,7 @@ int main(int argc, const char * argv[]) {
 			skip_line = 4;
 
 		free(read);
-		if( !(read = (char*)malloc(sizeof(char) * (l+1))) ) {
+		if( !(read = (char*)malloc(sizeof(char) * (BUFFER+1))) ) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
@@ -322,7 +323,8 @@ int main(int argc, const char * argv[]) {
 			i++;
 			if(i==2) {
 				//This line has the read
-				strncpy(read, buf, l); //Remove '\n', ensure length
+				strncpy(read, buf, BUFFER);
+				l = strlen(read) - 1;  //Remove '\n', ensure length
 				read[l] = '\0';
 				//printf("%s\n", read);
 				index = 0;
@@ -1124,7 +1126,7 @@ graph_t * build_graph(double nodes, double edges, int k) {
 	return dbg;
 }
 
-FILE * get_file_info(FILE * fp, int * format, int * reads_len) {
+FILE * get_file_info(FILE * fp, int * format) {
 	char buf[BUFFER+1];
 	fgets(buf, BUFFER, fp);
 	//printf("%s\n", buf);
@@ -1143,10 +1145,6 @@ FILE * get_file_info(FILE * fp, int * format, int * reads_len) {
 		fprintf(stdout, "[ERROR] unexpected EOF\n");
 		return NULL;
 	}
-
-	fgets(buf, BUFFER, fp);
-	//printf("%s\n", buf);
-	*reads_len = strlen(buf) - 1; //Ignoring '\n'
 
 	rewind(fp);
 
