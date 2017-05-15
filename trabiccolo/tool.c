@@ -471,9 +471,9 @@ int main(int argc, const char * argv[]) {
 			fprintf(stdout, "[ERROR] couldn't allocate\n");
 			return 1;
 		}
-		for(j=0; j<num_of_subs; j++) {
-			counts[i][j] = 1;
-			input_counts[i][j] = 1;
+		for(g=0; g<=num_of_subs; g++) {
+			counts[i][g] = 1;
+			input_counts[i][g] = 1;
 		}
 	}
 
@@ -535,7 +535,6 @@ int main(int argc, const char * argv[]) {
 	}
 	int hash_half0, hash_half1;
 
-	int flag0;
 	int flag;
 	int flag2;
 
@@ -545,8 +544,8 @@ int main(int argc, const char * argv[]) {
 		put(subs_reserve, smers[i]);
 		for(g=0; g <= num_of_subs; g++) {
 			clear(subs);
-			flag0 = get(subs_reserve, smer);
-			while( flag0 != -1 ) {
+			flag = get(subs_reserve, smer);
+			while( flag != -1 ) {
 				//printf("\t%s\n", smer);
 				clear(q);
 
@@ -566,8 +565,7 @@ int main(int argc, const char * argv[]) {
 					input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
 					freq = (double)count/total;
 					freq_input = (double)input_count/total_input;
-					diff = freq / freq_input;
-					if(diff >= 1) {
+					if(freq >= freq_input) {
 						counts[i][g] += count;
 						input_counts[i][g] += input_count;
 						for(j=0; j<s; j++) {
@@ -621,18 +619,23 @@ int main(int argc, const char * argv[]) {
 					}
 				}
 
-				flag0 = get(subs_reserve, smer);
+				flag = get(subs_reserve, smer);
 			}
 
 			clear(subs_reserve);
-			flag0 = get(subs, smer);
-			while( flag0 != -1 ) {
+			flag = get(subs, smer);
+			while( flag != -1 ) {
 				put(subs_reserve, smer);
-				flag0 = get(subs, smer);
+				flag = get(subs, smer);
 			}
 		}
 
 	}
+
+	free(half0);
+	free(half1);
+	free(kmer);
+	free(rev_smer);
 
 
 	time ( &rawtime );
@@ -658,25 +661,25 @@ int main(int argc, const char * argv[]) {
 	double sum_of_entropy;
 
 	fprintf(fp, "k-mer\tIP_count_0\tIP_freq_0\tInput_count_0\tInput_freq_0\tdiff_0\tdiff_log2_0\tentropy_0");
-	if(g >= 1) {
+	if(num_of_subs >= 1) {
 		fprintf(fp, "\tIP_count_1\tIP_freq_1\tInput_count_1\tInput_freq_1\tdiff_1\tdiff_log2_1\tentropy_1");
 	}
-	if(g >= 2) {
+	if(num_of_subs >= 2) {
 		fprintf(fp, "\tIP_count_2\tIP_freq_2\tInput_count_2\tInput_freq_2\tdiff_2\tdiff_log2_2\tentropy_2");
 	}
-	if(g >= 1) {
+	if(num_of_subs >= 1) {
 		fprintf(fp, "\tsum_of_entropy");
 	}
 	fprintf(fp, "\n");
 	for(i=0; i<expected_smer; i++) {
-		rev_hash(i, s, kmer);
-		if( search(adapters, kmer) ) {
+		rev_hash(i, s, smer);
+		if( search(adapters, smer) ) {
 			for(j=0; j<s; j++) {
-				kmer[j] = tolower(kmer[j]);
+				smer[j] = tolower(smer[j]);
 			}
 		}
 		sum_of_entropy = 0.0;
-		fprintf(fp, "%s", kmer);
+		fprintf(fp, "%s", smer);
 		for(g=0; g <= num_of_subs; g++) {
 			freq = (double)counts[i][g]/(double)total;
 			freq_input = (double)input_counts[i][g]/(double)total_input;
@@ -686,7 +689,9 @@ int main(int argc, const char * argv[]) {
 			sum_of_entropy = sum_of_entropy + entropy;
 			fprintf(fp, "\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\t%lf", counts[i][g], freq, input_counts[i][g], freq_input, diff, diff_log2, entropy);
 		}
-		fprintf(fp, "\t%lf", sum_of_entropy);
+		if(num_of_subs >= 1) {
+			fprintf(fp, "\t%lf", sum_of_entropy);
+		}
 
 		fprintf(fp, "\n");
 
@@ -783,7 +788,7 @@ int main(int argc, const char * argv[]) {
 	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 	fprintf(stdout, "Completed\n");
 
-	free(kmer);
+	free(smer);
 
 
 	return 0;

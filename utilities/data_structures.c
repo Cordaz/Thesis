@@ -16,7 +16,7 @@ node_t * create_node(int hashed, char * seq, int n) {
 	}
 
 	new->id = hashed;
-	if ( !(new->seq = (char*)malloc(sizeof(char) * strlen(seq))) ) {
+	if ( !(new->seq = (char*)malloc(sizeof(char) * (strlen(seq)+1) )) ) {
 		fprintf(stdout, "ERROR: couldn't allocate memory\n");
 		return NULL;
 	}
@@ -32,13 +32,7 @@ node_t * create_node(int hashed, char * seq, int n) {
 		return NULL;
 	}
 	for(i=0; i<n; i++) {
-		if( !(new->in_kstep[i] = (edge_t*)malloc(sizeof(edge_t))) ) {
-			return NULL;
-		}
 		new->in_kstep[i] = NULL;
-		if( !(new->out_kstep[i] = (edge_t*)malloc(sizeof(edge_t))) ) {
-			return NULL;
-		}
 		new->out_kstep[i] = NULL;
 	}
 
@@ -50,8 +44,8 @@ edge_t * create_edge(node_t * from, node_t * to, int hashed) {
 	edge_t * new;
 	if ( ( new = (edge_t *)malloc(sizeof(edge_t)) ) ) {
 		new->id = hashed;
-		new->count = 0; //Pseudo-count
-		new->input_count = 0; //Pseudo-count
+		new->count = 0;
+		new->input_count = 0;
 		new->from = from;
 		new->to = to;
 	}
