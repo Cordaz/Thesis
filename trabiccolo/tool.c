@@ -423,6 +423,7 @@ int main(int argc, const char * argv[]) {
 	double diff;
 	double diff_log2;
 	double entropy;
+	double entropy_count;
 
 
 	//estimate number of s-mer
@@ -659,16 +660,17 @@ int main(int argc, const char * argv[]) {
 	}
 
 	double sum_of_entropy;
+	double sum_of_entropy_count;
 
-	fprintf(fp, "k-mer\tIP_count_0\tIP_freq_0\tInput_count_0\tInput_freq_0\tdiff_0\tdiff_log2_0\tentropy_0");
+	fprintf(fp, "k-mer\tIP_count_0\tIP_freq_0\tInput_count_0\tInput_freq_0\tdiff_0\tdiff_log2_0\tentropy_0\tentropy_count_0");
 	if(num_of_subs >= 1) {
-		fprintf(fp, "\tIP_count_1\tIP_freq_1\tInput_count_1\tInput_freq_1\tdiff_1\tdiff_log2_1\tentropy_1");
+		fprintf(fp, "\tIP_count_1\tIP_freq_1\tInput_count_1\tInput_freq_1\tdiff_1\tdiff_log2_1\tentropy_1\tentropy_count_1");
 	}
 	if(num_of_subs >= 2) {
-		fprintf(fp, "\tIP_count_2\tIP_freq_2\tInput_count_2\tInput_freq_2\tdiff_2\tdiff_log2_2\tentropy_2");
+		fprintf(fp, "\tIP_count_2\tIP_freq_2\tInput_count_2\tInput_freq_2\tdiff_2\tdiff_log2_2\tentropy_2\tentropy_count_2");
 	}
 	if(num_of_subs >= 1) {
-		fprintf(fp, "\tsum_of_entropy");
+		fprintf(fp, "\tsum_of_entropy\tsum_of_entropy_count");
 	}
 	fprintf(fp, "\n");
 	for(i=0; i<expected_smer; i++) {
@@ -679,6 +681,7 @@ int main(int argc, const char * argv[]) {
 			}
 		}
 		sum_of_entropy = 0.0;
+		sum_of_entropy_count = 0.0;
 		fprintf(fp, "%s", smer);
 		for(g=0; g <= num_of_subs; g++) {
 			freq = (double)counts[i][g]/(double)total;
@@ -686,11 +689,13 @@ int main(int argc, const char * argv[]) {
 			diff = freq/freq_input;
 			diff_log2 = log2(diff);
 			entropy = freq* diff_log2;
+			entropy_count = (double)counts[i][g] * diff_log2;
 			sum_of_entropy = sum_of_entropy + entropy;
-			fprintf(fp, "\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\t%lf", counts[i][g], freq, input_counts[i][g], freq_input, diff, diff_log2, entropy);
+			sum_of_entropy_count = sum_of_entropy_count + entropy_count;
+			fprintf(fp, "\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\t%lf\t%lf", counts[i][g], freq, input_counts[i][g], freq_input, diff, diff_log2, entropy, entropy_count);
 		}
 		if(num_of_subs >= 1) {
-			fprintf(fp, "\t%lf", sum_of_entropy);
+			fprintf(fp, "\t%lf\t%lf", sum_of_entropy, sum_of_entropy_count);
 		}
 
 		fprintf(fp, "\n");
