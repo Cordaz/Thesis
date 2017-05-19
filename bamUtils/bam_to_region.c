@@ -6,28 +6,6 @@
 
 #include "bam_to_region.h"
 
-
-myBam_t * myBam_open(char * bamfile) {
-	myBam_t * myBam;
-	if( !(myBam = (myBam_t*)malloc(sizeof(myBam_t))) ) {
-		fprintf(stdout, "[ERROR] can't allocate \n");
-		return NULL;
-	}
-
-	myBam->in = sam_open(bamfile, "r");
-	myBam->header = sam_hdr_read(myBam->in);
-	myBam->aln = bam_init1();
-
-	return myBam;
-}
-
-void myBam_close(myBam_t * myBam) {
-	bam_destroy1(myBam->aln);
-	bam_hdr_destroy(myBam->header);
-	sam_close(myBam->in);
-	free(myBam);
-}
-
 region_t * get_next_region(myBam_t * myBam, region_t * region, int extension) {
 	int status = sam_read1(myBam->in, myBam->header, myBam->aln);
 	if(status <= 0) return NULL;

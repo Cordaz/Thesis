@@ -3,22 +3,8 @@
 
 	#include <htslib/hts.h>
 	#include <htslib/sam.h>
-
-	typedef struct myBam_s {
-		samFile * in;
-		bam_hdr_t * header;
-		bam1_t * aln;
-	} myBam_t;
-
-	typedef struct region_s {
-		char chromosome[6];
-		int start;
-		int end;
-	} region_t;
-
-	myBam_t * myBam_open(char *);
-
-	void myBam_close(myBam_t *);
+	#include "genome.h"
+	#include "bam_manager.h"
 
 	/*
 	 * Requires both mybam and region to be well initialized, skipp control

@@ -6,6 +6,7 @@
 
 #include "bam_to_bed.h"
 #include "bam_to_region.h"
+#include "genome.h"
 
 int bam_to_bed(char * bam, char * bed, int extension, int to_region) {
 
@@ -32,7 +33,7 @@ int bam_to_bed(char * bam, char * bed, int extension, int to_region) {
 			fprintf(stdout, "[ERROR] unexpected EOF\n");
 			return -2;
 		}
-		
+
 		while(region = get_next_region_overlap(myBam, region, extension, 1)) {
 			fprintf(bed_fp, "%s\t%d\t%d\n", region->chromosome, region->start, region->end);
 		}
@@ -50,6 +51,8 @@ int bam_to_bed(char * bam, char * bed, int extension, int to_region) {
 	return 0;
 }
 
+/*
 int main(int argc, char * argv[]) {
 	return bam_to_bed(argv[1], argv[2], atoi(argv[3]), atoi(argv[4]));
 }
+*/
