@@ -8,7 +8,10 @@ sequence_t * get_sequence(genome_t * genome, region_t * region, sequence_t * seq
 	if(!region) return NULL;
 
 	if( !genome->chromosome || strcmp(region->chromosome, genome->chromosome->name) != 0 ) {
-		genome = genome_load_chromosome(genome, region->chromosome);
+		if(!(genome = genome_load_chromosome(genome, region->chromosome)) ) {
+			fprintf(stdout, "[ERROR] can't load correctly %s\n", region->chromosome);
+			return NULL;
+		}
 	}
 
 	if(!sequence) {
@@ -28,7 +31,7 @@ sequence_t * get_sequence(genome_t * genome, region_t * region, sequence_t * seq
 	return sequence;
 }
 
-/*
+
 int main(int argc, char * argv[]) {
 	genome_t * genome = NULL;
 	sequence_t * sequence = NULL;
@@ -49,6 +52,11 @@ int main(int argc, char * argv[]) {
 		fprintf(stdout, "[ERROR] can't open %s\n", argv[3]);
 	}
 
+	/*
+	int lastpos = -1;
+	char lastchrom[6] = "";
+	*/
+
 	if(atoi(argv[5])) { //TO_REGION
 		int status;
 		status = sam_read1(myBam->in, myBam->header, myBam->aln);
@@ -63,8 +71,27 @@ int main(int argc, char * argv[]) {
 		}
 	} else {
 		while(region = get_next_region(myBam, region, atoi(argv[4]))) {
-			sequence = get_sequence(genome, region, sequence);
+			//printf("%s:%d-%d\n", region->chromosome, region->start, region->end);
+
+			if(!(sequence = get_sequence(genome, region, sequence))) {
+				return 1;
+			}
+
 			fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
+
+			/*
+
+			if( strcmp(region->chromosome, lastchrom) != 0 ) {
+				strncpy(lastchrom, region->chromosome, 6);
+				lastpos = -1;
+			}
+
+			if (region->start > lastpos) {
+				fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
+				lastpos = region->start;
+			}
+			*/
+
 		}
 	}
 
@@ -72,4 +99,3 @@ int main(int argc, char * argv[]) {
 
 	return 0;
 }
-*/

@@ -14,19 +14,30 @@ region_t * get_next_region(myBam_t * myBam, region_t * region, int extension) {
 		return get_next_region(myBam, region, extension);
 	}
 
-	strncpy(region->chromosome, myBam->header->target_name[myBam->aln->core.tid], 5);
-	region->start = myBam->aln->core.pos; //0 based
-	region->end = bam_endpos(myBam->aln);
+	int start, end;
+
+	start = myBam->aln->core.pos; //0 based
+	end = bam_endpos(myBam->aln);
 
 	if(myBam->aln->core.flag == 0) {
 		if(extension) {
-			region->end = region->start + extension;
+			end = start + extension;
 		}
 	} else if(myBam->aln->core.flag == 16) {
 		if(extension) {
-			region->start = region->end - extension;
+			start = end - extension;
 		}
 	}
+
+	if( strcmp(region->chromosome, myBam->header->target_name[myBam->aln->core.tid]) == 0 ) { //Remove duplicates
+		if(start <= region->start) {
+			return get_next_region(myBam, region, extension);
+		}
+	}
+
+	strncpy(region->chromosome, myBam->header->target_name[myBam->aln->core.tid], 6);
+	region->start = start;
+	region->end = end;
 
 	return region;
 }
@@ -57,7 +68,7 @@ region_t * get_next_region_overlap(myBam_t * myBam, region_t * region, int exten
 	}
 
 	if(new_region) {
-		strncpy(region->chromosome, myBam->header->target_name[myBam->aln->core.tid], 5);
+		strncpy(region->chromosome, myBam->header->target_name[myBam->aln->core.tid], 6);
 		region->start = startpos;
 		region->end = endpos;
 

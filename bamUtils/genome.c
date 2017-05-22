@@ -42,6 +42,8 @@ genome_t * genome_load_chromosome(genome_t * genome, char * chromosome_name) {
 		free(genome->chromosome->seq);
 	}
 
+	//printf("LOADING %s\n", chromosome_name);
+
 	int index;
 	index = get_chrom_index(genome->info, chromosome_name);
 	genome->chromosome->index = index;
@@ -70,15 +72,15 @@ genome_t * genome_load_chromosome(genome_t * genome, char * chromosome_name) {
 
 	int i=0;
 	fgets(buf, 512, fp); //Read and ignore first line
-	while(!feof(fp)) {
-		fread(&c, 1, 1, fp);
+	while(!feof(fp) || i<size) {
+		c = fgetc(fp);
 		if(c != '\n') {
 			if(islower(c)) c = toupper(c);
 			genome->chromosome->seq[i] = c;
 			i++;
 		}
 	}
-
+	genome->chromosome->seq[i] = '\0';
 
 	fclose(fp);
 
@@ -120,7 +122,7 @@ chromosomes_info_t * chromosome_info_init(char ** names, int * sizes, int dim) {
 	}
 
 	for(i=0; i<dim; i++) {
-		strncpy(chrom_info->names[i], names[i], 5);
+		strncpy(chrom_info->names[i], names[i], 6);
 		chrom_info->sizes[i] = sizes[i];
 	}
 	chrom_info->dim = dim;
