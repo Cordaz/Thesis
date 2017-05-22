@@ -4,7 +4,7 @@
 #include <malloc.h>
 #include <string.h>
 
-#include "bam_to_bed.h"
+//#include "bam_to_bed.h"
 #include "bam_to_region.h"
 #include "genome.h"
 
@@ -25,21 +25,33 @@ int bam_to_bed(char * bam, char * bed, int extension, int to_region) {
 		fprintf(stdout, "[ERROR] can't allocate\n");
 		return -1;
 	}
+	int status;
+	int newregion = 1;
 
 	if(to_region) {
-		int status;
 		status = sam_read1(myBam->in, myBam->header, myBam->aln);
 		if(status <= 0) {
 			fprintf(stdout, "[ERROR] unexpected EOF\n");
 			return -2;
 		}
 
-		while(region = get_next_region_overlap(myBam, region, extension, 1)) {
-			fprintf(bed_fp, "%s\t%d\t%d\n", region->chromosome, region->start, region->end);
+		region = get_next_region_overlap(myBam, region, extension, &newregion, &status);
+		while( status != EOF ) {
+			if(status == REG_COMPLETE) {
+				//printf("%s\t%d\t%d\n", region->chromosome, region->start, region->end);
+				fprintf(bed_fp, "%s\t%d\t%d\n", region->chromosome, region->start, region->end);
+			}
+			//printf("%d\n", status);
+			region = get_next_region_overlap(myBam, region, extension, &newregion, &status);
 		}
+		fprintf(bed_fp, "%s\t%d\t%d\n", region->chromosome, region->start, region->end);
 	} else {
-		while(region = get_next_region(myBam, region, extension)) {
-			fprintf(bed_fp, "%s\t%d\t%d\n", region->chromosome, region->start, region->end);
+		region = get_next_region(myBam, region, extension, &status);
+		while( status != EOF) {
+			if(status == REG_COMPLETE) {
+				fprintf(bed_fp, "%s\t%d\t%d\n", region->chromosome, region->start, region->end);
+			}
+			region = get_next_region(myBam, region, extension, &status);
 		}
 	}
 
@@ -51,8 +63,7 @@ int bam_to_bed(char * bam, char * bed, int extension, int to_region) {
 	return 0;
 }
 
-/*
+
 int main(int argc, char * argv[]) {
 	return bam_to_bed(argv[1], argv[2], atoi(argv[3]), atoi(argv[4]));
 }
-*/

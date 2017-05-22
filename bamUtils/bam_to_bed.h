@@ -10,6 +10,6 @@
 	 * bam_path, bed_path, extension size, boolean region (either consider single read or complete region)
 	 *
 	 */
-	int bam_to_bed(char *, char *, int, int)
+	int bam_to_bed(char *, char *, int, int);
 
 #endif

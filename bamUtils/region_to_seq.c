@@ -44,7 +44,10 @@ int main(int argc, char * argv[]) {
 	//TEST CASE - OPEN A BAM - NOT NEEDED AFTER
 	myBam_t * myBam = myBam_open(argv[1]);
 	chromosomes_info_t * chrom_info;
-	chrom_info = chromosome_info_init(myBam->header->target_name, myBam->header->target_len, myBam->header->n_targets);
+	if(!(chrom_info = chromosome_info_init(myBam->header->target_name, myBam->header->target_len, myBam->header->n_targets))) {
+		fprintf(stdout, "[ERROR] failed to load chromosomes info\n");
+		return 1;
+	}
 	genome = genome_init(argv[2], chrom_info);
 
 	FILE * fa_fp;
@@ -52,10 +55,6 @@ int main(int argc, char * argv[]) {
 		fprintf(stdout, "[ERROR] can't open %s\n", argv[3]);
 	}
 
-	/*
-	int lastpos = -1;
-	char lastchrom[6] = "";
-	*/
 
 	if(atoi(argv[5])) { //TO_REGION
 		int status;
@@ -66,7 +65,10 @@ int main(int argc, char * argv[]) {
 		}
 
 		while(region = get_next_region_overlap(myBam, region, atoi(argv[4]), 1)) {
-			sequence = get_sequence(genome, region, sequence);
+			//printf("Region: %s:%d-%d\n", region->chromosome, region->start, region->end);
+			if(!(sequence = get_sequence(genome, region, sequence))) {
+				return 1;
+			}
 			fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
 		}
 	} else {
@@ -78,19 +80,6 @@ int main(int argc, char * argv[]) {
 			}
 
 			fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
-
-			/*
-
-			if( strcmp(region->chromosome, lastchrom) != 0 ) {
-				strncpy(lastchrom, region->chromosome, 6);
-				lastpos = -1;
-			}
-
-			if (region->start > lastpos) {
-				fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
-				lastpos = region->start;
-			}
-			*/
 
 		}
 	}

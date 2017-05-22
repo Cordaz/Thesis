@@ -6,18 +6,24 @@
 
 #include "bam_to_region.h"
 
-region_t * get_next_region(myBam_t * myBam, region_t * region, int extension) {
-	int status = sam_read1(myBam->in, myBam->header, myBam->aln);
-	if(status <= 0) return NULL;
-
-	if(myBam->aln->core.flag == 4) {
-		return get_next_region(myBam, region, extension);
+region_t * get_next_region(myBam_t * myBam, region_t * region, int extension, int * status) {
+	int file_status = sam_read1(myBam->in, myBam->header, myBam->aln);
+	if(file_status <= 0) {
+		*status = EOF;
+		return region;
 	}
 
-	int start, end;
+	if(myBam->aln->core.flag != 0 && myBam->aln->core.flag != 16) {
+		*status = CONTINUE;
+		return region;
+	}
 
-	start = myBam->aln->core.pos; //0 based
+	int start = 0;
+	int end = 0;
+
+	start = myBam->aln->core.pos;
 	end = bam_endpos(myBam->aln);
+
 
 	if(myBam->aln->core.flag == 0) {
 		if(extension) {
@@ -29,28 +35,40 @@ region_t * get_next_region(myBam_t * myBam, region_t * region, int extension) {
 		}
 	}
 
+
 	if( strcmp(region->chromosome, myBam->header->target_name[myBam->aln->core.tid]) == 0 ) { //Remove duplicates
 		if(start <= region->start) {
-			return get_next_region(myBam, region, extension);
+			*status = CONTINUE;
+			return region;
 		}
 	}
 
 	strncpy(region->chromosome, myBam->header->target_name[myBam->aln->core.tid], 6);
 	region->start = start;
+	if(end > myBam->header->target_len[myBam->aln->core.tid]) {
+		*status = 1;
+		return region;
+	}
+
 	region->end = end;
 
+	*status = REG_COMPLETE;
 	return region;
 }
 
-region_t * get_next_region_overlap(myBam_t * myBam, region_t * region, int extension, int new_region) {
-	int status;
+region_t * get_next_region_overlap(myBam_t * myBam, region_t * region, int extension, int * new_region, int * status) {
+	int file_status;
 
-	if(myBam->aln->core.flag == 4) {
-		if(new_region) {
-			status = sam_read1(myBam->in, myBam->header, myBam->aln);
-			if(status <= 0) return NULL;
-		}
-		return get_next_region_overlap(myBam, region, extension, new_region);
+	if(myBam->aln->core.flag != 0 && myBam->aln->core.flag != 16) {
+		//if(*new_region) {
+			file_status = sam_read1(myBam->in, myBam->header, myBam->aln);
+			if(file_status <= 0) {
+				*status = EOF;
+				return region;
+			}
+		//}
+		*status = CONTINUE;
+		return region;
 	}
 
 	int startpos, endpos;
@@ -67,27 +85,44 @@ region_t * get_next_region_overlap(myBam_t * myBam, region_t * region, int exten
 		}
 	}
 
-	if(new_region) {
+
+	if(endpos > myBam->header->target_len[myBam->aln->core.tid]) {
+		endpos = myBam->header->target_len[myBam->aln->core.tid];
+	}
+
+	if(*new_region) {
 		strncpy(region->chromosome, myBam->header->target_name[myBam->aln->core.tid], 6);
 		region->start = startpos;
 		region->end = endpos;
 
-		status = sam_read1(myBam->in, myBam->header, myBam->aln);
-		if(status <= 0) return NULL;
+		file_status = sam_read1(myBam->in, myBam->header, myBam->aln);
+		if(file_status <= 0) {
+			*status = EOF;
+			return region;
+		}
 
-		return get_next_region_overlap(myBam, region, extension, 0);
+		*status = CONTINUE;
+		*new_region = 0;
+		return region;
 	}
 
 	//A region already exists, check if can be extended.
 	if(startpos <= region->end && startpos >= region->start) {
 		region->end = endpos;
 
-		status = sam_read1(myBam->in, myBam->header, myBam->aln);
-		if(status <= 0) return region;
+		file_status = sam_read1(myBam->in, myBam->header, myBam->aln);
+		if(file_status <= 0) {
+			*status = EOF;
+			return region;
+		}
 
-		return get_next_region_overlap(myBam, region, extension, 0);
+		*status = CONTINUE;
+		*new_region = 0;
+		return region;
 	}
 
 	//Can't be extended, return the region created up to now
+	*status = REG_COMPLETE;
+	*new_region = 1;
 	return region;
 }
