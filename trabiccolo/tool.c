@@ -18,6 +18,7 @@
 #endif
 
 #define BUFFER 512
+#define SEQUENCE_BUFFER 1048576
 #define MIN_ARGS 2
 #define MAX_SUBS 2
 #define BUILD 1
@@ -232,7 +233,12 @@ int main(int argc, const char * argv[]) {
 			skip_line = 4;
 
 		char * read;
-		if( !(read = (char*)malloc(sizeof(char) * (BUFFER+1))) ) {
+		if( !(read = (char*)malloc(sizeof(char) * (SEQUENCE_BUFFER+1))) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
+			return 1;
+		}
+		char * seq_buf;
+		if( !(seq_buf = (char*)malloc(sizeof(char) * (SEQUENCE_BUFFER+1))) ) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
@@ -250,14 +256,14 @@ int main(int argc, const char * argv[]) {
 
 
 		//Read first line
-		fgets(buf, BUFFER, fp);
+		fgets(seq_buf, SEQUENCE_BUFFER, fp);
 		i=0;
 		read_index = 0;
 		while(!feof(fp)) {
 			i++;
 			if(i==2) {
 				//This line has the read
-				strncpy(read, buf, BUFFER);
+				strncpy(read, seq_buf, SEQUENCE_BUFFER+1);
 				l = strlen(read) - 1;  //Remove '\n', ensure length
 				read[l] = '\0';
 				//printf("%s\n", read);
@@ -275,7 +281,7 @@ int main(int argc, const char * argv[]) {
 			if(i==skip_line) {
 				i=0;
 			}
-			fgets(buf, BUFFER, fp);
+			fgets(seq_buf, SEQUENCE_BUFFER, fp);
 		}
 
 		fclose(fp);
@@ -301,7 +307,7 @@ int main(int argc, const char * argv[]) {
 			skip_line = 4;
 
 		free(read);
-		if( !(read = (char*)malloc(sizeof(char) * (BUFFER+1))) ) {
+		if( !(read = (char*)malloc(sizeof(char) * (SEQUENCE_BUFFER+1))) ) {
 			fprintf(stdout, "[ERROR] couldn't allocate memory\n");
 			return 1;
 		}
@@ -312,7 +318,7 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "Reading '%s'\n", input_file);
 
 		//Read first line
-		fgets(buf, BUFFER, fp);
+		fgets(seq_buf, SEQUENCE_BUFFER, fp);
 		read_index = 0;
 		for(i=0; i<nodes*nodes; i++) {
 			last_seen[i] = -1;
@@ -323,7 +329,7 @@ int main(int argc, const char * argv[]) {
 			i++;
 			if(i==2) {
 				//This line has the read
-				strncpy(read, buf, BUFFER);
+				strncpy(read, seq_buf, SEQUENCE_BUFFER+1);
 				l = strlen(read) - 1;  //Remove '\n', ensure length
 				read[l] = '\0';
 				//printf("%s\n", read);
@@ -341,12 +347,13 @@ int main(int argc, const char * argv[]) {
 			if(i==skip_line) {
 				i=0;
 			}
-			fgets(buf, BUFFER, fp);
+			fgets(seq_buf, SEQUENCE_BUFFER, fp);
 		}
 
 		fclose(fp);
 		free(last_seen);
 		free(read);
+		free(seq_buf);
 
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
