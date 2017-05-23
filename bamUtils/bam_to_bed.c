@@ -25,8 +25,7 @@ int bam_to_bed(char * bam, char * bed, int extension, int to_region) {
 		fprintf(stdout, "[ERROR] can't allocate\n");
 		return -1;
 	}
-	int status;
-	int newregion = 1;
+	int status = REG_COMPLETE;
 
 	if(to_region) {
 		status = sam_read1(myBam->in, myBam->header, myBam->aln);
@@ -34,15 +33,16 @@ int bam_to_bed(char * bam, char * bed, int extension, int to_region) {
 			fprintf(stdout, "[ERROR] unexpected EOF\n");
 			return -2;
 		}
+		status = REG_COMPLETE;
 
-		region = get_next_region_overlap(myBam, region, extension, &newregion, &status);
+		region = get_next_region_overlap(myBam, region, extension, &status);
 		while( status != EOF ) {
 			if(status == REG_COMPLETE) {
 				//printf("%s\t%d\t%d\n", region->chromosome, region->start, region->end);
 				fprintf(bed_fp, "%s\t%d\t%d\n", region->chromosome, region->start, region->end);
 			}
 			//printf("%d\n", status);
-			region = get_next_region_overlap(myBam, region, extension, &newregion, &status);
+			region = get_next_region_overlap(myBam, region, extension, &status);
 		}
 		fprintf(bed_fp, "%s\t%d\t%d\n", region->chromosome, region->start, region->end);
 	} else {

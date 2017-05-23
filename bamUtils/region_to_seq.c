@@ -55,32 +55,43 @@ int main(int argc, char * argv[]) {
 		fprintf(stdout, "[ERROR] can't open %s\n", argv[3]);
 	}
 
+	int status = REG_COMPLETE;
 
 	if(atoi(argv[5])) { //TO_REGION
-		int status;
 		status = sam_read1(myBam->in, myBam->header, myBam->aln);
 		if(status <= 0) {
 			fprintf(stdout, "[ERROR] unexpected EOF\n");
 			return -2;
 		}
+		status = REG_COMPLETE;
 
-		while(region = get_next_region_overlap(myBam, region, atoi(argv[4]), 1)) {
-			//printf("Region: %s:%d-%d\n", region->chromosome, region->start, region->end);
-			if(!(sequence = get_sequence(genome, region, sequence))) {
-				return 1;
+		region = get_next_region_overlap(myBam, region, atoi(argv[4]), &status);
+		while( status != EOF) {
+			if(status == REG_COMPLETE) {
+				if(!(sequence = get_sequence(genome, region, sequence))) {
+					return 1;
+				}
+				//printf("%s:%d-%d\n", region->chromosome, region->start, region->end);
+				fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
 			}
-			fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
+			region = get_next_region_overlap(myBam, region, atoi(argv[4]), &status);
+			//printf("%d\n", status);
 		}
+		if(!(sequence = get_sequence(genome, region, sequence))) {
+			return 1;
+		}
+		fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
 	} else {
-		while(region = get_next_region(myBam, region, atoi(argv[4]))) {
+		region = get_next_region(myBam, region, atoi(argv[4]), &status);
+		while( status != EOF ) {
 			//printf("%s:%d-%d\n", region->chromosome, region->start, region->end);
-
-			if(!(sequence = get_sequence(genome, region, sequence))) {
-				return 1;
+			if(status == REG_COMPLETE) {
+				if(!(sequence = get_sequence(genome, region, sequence))) {
+					return 1;
+				}
+				fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
 			}
-
-			fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
-
+			region = get_next_region(myBam, region, atoi(argv[4]), &status);
 		}
 	}
 

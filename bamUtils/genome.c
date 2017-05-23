@@ -86,6 +86,8 @@ genome_t * genome_load_chromosome(genome_t * genome, char * chromosome_name) {
 
 	fclose(fp);
 
+	printf("LOADED\n");
+
 	return genome;
 
 }

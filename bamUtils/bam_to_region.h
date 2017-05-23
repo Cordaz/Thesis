@@ -15,6 +15,6 @@
 	 */
 	region_t * get_next_region(myBam_t *, region_t *, int, int *);
 
-	region_t * get_next_region_overlap(myBam_t *, region_t *, int, int *, int *);
+	region_t * get_next_region_overlap(myBam_t *, region_t *, int, int *);
 
 #endif
