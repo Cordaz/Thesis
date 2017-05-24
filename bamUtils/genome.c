@@ -6,7 +6,7 @@
 #include "genome.h"
 
 genome_t * genome_init(char * path, chromosomes_info_t * info) {
-	if(path[strlen(path)-1] != '/') path[strlen(path)-1] = '/';
+	if(path[strlen(path)-1] != '/') strcat(path, "/");
 
 	genome_t * genome;
 
