@@ -6,7 +6,9 @@
 #include "bam_lib.h"
 #include "genome.h"
 
-#define BUFFER 512
+#ifndef BUFFER
+	#define BUFFER 512
+#endif
 
 static const char* const usage[] = {
 	"bamUtils [options] (-b|-fg <path/to/genome/dir/>|-bfg <path/to/genome/dir/>) -i <in.bam>|<in.sam>",
@@ -60,13 +62,21 @@ int main(int argc, const char * argv[]) {
 	}
 
 	char support[BUFFER+1];
+	char support2[BUFFER+1];
 	char * extension;
 	char bed_file[BUFFER+1];
 	strncpy(bed_file, bam_file, BUFFER);
 	extension = strrchr(bed_file, '.');
-	strcpy(support, "");
-	if(l_arg) snprintf(support, BUFFER, "_ext%d", l_arg);
-	if(region_arg) snprintf(support, BUFFER, "%s_region", support);
+	if(l_arg > 0) {
+		snprintf(support, BUFFER, "_ext%d", l_arg);
+	}
+	if(region_arg) {
+		if(l_arg == 0) snprintf(support, BUFFER, "_region");
+		else {
+			snprintf(support2, BUFFER, "_region");
+			strcat(support, support2);
+		}
+	}
 	strcpy(extension, support);
 	strcat(extension, ".bed");
 	char fa_file[BUFFER+1];
