@@ -17,8 +17,12 @@
 	#define printf(...)
 #endif
 
-#define BUFFER 512
-#define SEQUENCE_BUFFER 1048576
+#ifndef BUFFER
+	#define BUFFER 512
+#endif
+#ifndef SEQUENCE_BUFFER
+	#define SEQUENCE_BUFFER 1048576
+#endif
 #define MIN_ARGS 2
 #define MAX_SUBS 2
 #define BUILD 1
