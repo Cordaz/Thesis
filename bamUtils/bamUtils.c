@@ -67,16 +67,16 @@ int main(int argc, const char * argv[]) {
 	char bed_file[BUFFER+1];
 	strncpy(bed_file, bam_file, BUFFER);
 	extension = strrchr(bed_file, '.');
+	strcpy(support, "");
+	strcpy(support2, "");
 	if(l_arg > 0) {
-		snprintf(support, BUFFER, "_ext%d", l_arg);
+		snprintf(support2, BUFFER, "_ext%d", l_arg);
 	}
-	if(region_arg) {
-		if(l_arg == 0) snprintf(support, BUFFER, "_region");
-		else {
-			snprintf(support2, BUFFER, "_region");
-			strcat(support, support2);
-		}
-	}
+	strcat(support, support2);
+	strcpy(support2, "");
+	if(region_arg) strcpy(support2, "_region");
+	strcat(support, support2);
+	//printf("%s\n", support);
 	strcpy(extension, support);
 	strcat(extension, ".bed");
 	char fa_file[BUFFER+1];

@@ -42,7 +42,7 @@ genome_t * genome_load_chromosome(genome_t * genome, char * chromosome_name) {
 		free(genome->chromosome->seq);
 	}
 
-	printf("LOADING %s\n", chromosome_name);
+	//printf("LOADING %s\n", chromosome_name);
 
 	int index;
 	index = get_chrom_index(genome->info, chromosome_name);
@@ -87,7 +87,7 @@ genome_t * genome_load_chromosome(genome_t * genome, char * chromosome_name) {
 
 	fclose(fp);
 
-	printf("LOADED\n");
+	//printf("LOADED\n");
 
 	return genome;
 
