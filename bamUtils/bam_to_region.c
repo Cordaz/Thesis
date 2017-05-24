@@ -81,7 +81,7 @@ region_t * get_next_region_overlap(myBam_t * myBam, region_t * region, int exten
 	}
 
 	int startpos, endpos;
-	startpos = myBam->aln->core.pos; //0 based
+	startpos = myBam->aln->core.pos; //1 based
 	endpos = bam_endpos(myBam->aln);
 
 	if(myBam->aln->core.flag == 0) {

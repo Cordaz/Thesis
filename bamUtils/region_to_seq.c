@@ -72,7 +72,7 @@ int main(int argc, char * argv[]) {
 					return 1;
 				}
 				//printf("%s:%d-%d\n", region->chromosome, region->start, region->end);
-				fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
+				fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start, sequence->seq);
 			}
 			region = get_next_region_overlap(myBam, region, atoi(argv[4]), &status);
 			//printf("%d\n", status);
@@ -80,7 +80,7 @@ int main(int argc, char * argv[]) {
 		if(!(sequence = get_sequence(genome, region, sequence))) {
 			return 1;
 		}
-		fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
+		fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start, sequence->seq);
 	} else {
 		region = get_next_region(myBam, region, atoi(argv[4]), &status);
 		while( status != EOF ) {
@@ -89,7 +89,7 @@ int main(int argc, char * argv[]) {
 				if(!(sequence = get_sequence(genome, region, sequence))) {
 					return 1;
 				}
-				fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start+1, sequence->seq);
+				fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start, sequence->seq);
 			}
 			region = get_next_region(myBam, region, atoi(argv[4]), &status);
 		}

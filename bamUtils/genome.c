@@ -54,7 +54,7 @@ genome_t * genome_load_chromosome(genome_t * genome, char * chromosome_name) {
 
 	//printf("%s, %d, %d\n", chromosome_name, index, size);
 
-	if( !(genome->chromosome->seq = (char*)malloc(sizeof(char) * (size + 1))) ) {
+	if( !(genome->chromosome->seq = (char*)malloc(sizeof(char) * (size + 1 + 1))) ) {
 		fprintf(stdout, "[ERROR] can't allocate\n");
 		return NULL;
 	}
@@ -72,7 +72,8 @@ genome_t * genome_load_chromosome(genome_t * genome, char * chromosome_name) {
 
 	char c;
 
-	int i=0;
+	genome->chromosome->seq[0] = '>'; //to 1-based
+	int i=1;
 	fgets(buf, 512, fp); //Read and ignore first line
 	while(!feof(fp) || i<size) {
 		c = fgetc(fp);
