@@ -31,8 +31,8 @@ sequence_t * get_sequence(genome_t * genome, region_t * region, sequence_t * seq
 	return sequence;
 }
 
-
-int main(int argc, char * argv[]) {
+/*
+int bam_to_fa(char * bam_file, char * fa_file, char * genome_dir, int extension, int to_region) {
 	genome_t * genome = NULL;
 	sequence_t * sequence = NULL;
 	region_t * region;
@@ -41,23 +41,22 @@ int main(int argc, char * argv[]) {
 		return -1;
 	}
 
-	//TEST CASE - OPEN A BAM - NOT NEEDED AFTER
-	myBam_t * myBam = myBam_open(argv[1]);
+	myBam_t * myBam = myBam_open(bam_file);
 	chromosomes_info_t * chrom_info;
 	if(!(chrom_info = chromosome_info_init(myBam->header->target_name, myBam->header->target_len, myBam->header->n_targets))) {
 		fprintf(stdout, "[ERROR] failed to load chromosomes info\n");
 		return 1;
 	}
-	genome = genome_init(argv[2], chrom_info);
+	genome = genome_init(genome_dir, chrom_info);
 
 	FILE * fa_fp;
-	if(!(fa_fp = fopen(argv[3], "w+"))) {
+	if(!(fa_fp = fopen(fa_file, "w+"))) {
 		fprintf(stdout, "[ERROR] can't open %s\n", argv[3]);
 	}
 
 	int status = REG_COMPLETE;
 
-	if(atoi(argv[5])) { //TO_REGION
+	if(to_region) { //TO_REGION
 		status = sam_read1(myBam->in, myBam->header, myBam->aln);
 		if(status <= 0) {
 			fprintf(stdout, "[ERROR] unexpected EOF\n");
@@ -65,7 +64,7 @@ int main(int argc, char * argv[]) {
 		}
 		status = REG_COMPLETE;
 
-		region = get_next_region_overlap(myBam, region, atoi(argv[4]), &status);
+		region = get_next_region_overlap(myBam, region, extension, &status);
 		while( status != EOF) {
 			if(status == REG_COMPLETE) {
 				if(!(sequence = get_sequence(genome, region, sequence))) {
@@ -74,7 +73,7 @@ int main(int argc, char * argv[]) {
 				//printf("%s:%d-%d\n", region->chromosome, region->start, region->end);
 				fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start, sequence->seq);
 			}
-			region = get_next_region_overlap(myBam, region, atoi(argv[4]), &status);
+			region = get_next_region_overlap(myBam, region, extension, &status);
 			//printf("%d\n", status);
 		}
 		if(!(sequence = get_sequence(genome, region, sequence))) {
@@ -82,7 +81,7 @@ int main(int argc, char * argv[]) {
 		}
 		fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start, sequence->seq);
 	} else {
-		region = get_next_region(myBam, region, atoi(argv[4]), &status);
+		region = get_next_region(myBam, region, extension, &status);
 		while( status != EOF ) {
 			//printf("%s:%d-%d\n", region->chromosome, region->start, region->end);
 			if(status == REG_COMPLETE) {
@@ -91,11 +90,14 @@ int main(int argc, char * argv[]) {
 				}
 				fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start, sequence->seq);
 			}
-			region = get_next_region(myBam, region, atoi(argv[4]), &status);
+			region = get_next_region(myBam, region, extension, &status);
 		}
 	}
 
 	fclose(fa_fp);
 
+	myBam_close(myBam);
+
 	return 0;
 }
+*/

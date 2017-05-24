@@ -63,7 +63,8 @@ int bam_to_bed(char * bam, char * bed, int extension, int to_region) {
 	return 0;
 }
 
-
+/*
 int main(int argc, char * argv[]) {
 	return bam_to_bed(argv[1], argv[2], atoi(argv[3]), atoi(argv[4]));
 }
+*/
