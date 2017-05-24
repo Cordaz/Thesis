@@ -134,7 +134,7 @@ int main(int argc, const char * argv[]) {
 		region = get_next_region_overlap(myBam, region, l_arg, &status);
 		while( status != EOF) {
 			if(status == REG_COMPLETE) {
-				if(fa_file) {
+				if(fa_arg) {
 					if(!(sequence = get_sequence(genome, region, sequence))) {
 						return 1;
 					}
