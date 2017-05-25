@@ -17,8 +17,6 @@ to change:
 dataset_path = home + "/dataset/"
 genome_path = dataset_path + "genome/"
 
-#Works on 34 long reads
-read_length = 34
 #Extension
 ext_length = 34
 
@@ -55,7 +53,7 @@ def get_pair_chr_length(line):
 
 def get_sam_info(line):
     args = line.strip().split("\t")
-    return (args[0], int(args[1]), args[2], int(args[3])) #(>id, strand, chrom, pos)
+    return (args[0], int(args[1]), args[2], int(args[3]), len(args[9])) #(>id, strand, chrom, pos, read_len)
 
 def get_chromosome_seq(chrom):
     seq = ""
@@ -66,15 +64,7 @@ def get_chromosome_seq(chrom):
     return seq
 
 
-def complementary(seq):
-   comp_bases = {'A':'T', 'C':'G', 'G':'C', 'T':'A', 'N':'N'}
-   c_seq = ""
-   for char in reversed(seq):
-      c_seq = c_seq + comp_bases[char]
-
-   return c_seq
-
-def extend_read(chrom_index, seq, strand, chrom, pos):
+def extend_read(chrom_index, seq, strand, chrom, pos, read_len):
     chrom_len = int(chrom_length[chrom])
     if strand == not_mapped:
         return "", chrom_index
@@ -89,17 +79,17 @@ def extend_read(chrom_index, seq, strand, chrom, pos):
             return "", chrom_index
         return extend_pos(seq, chrom_index), chrom_index
     if strand == neg_strand:
-        if (chrom_len - chrom_index) < read_length:
+        if (chrom_len - chrom_index) < read_len:
             return "", chrom_index
-        return extend_neg(seq, chrom_index), chrom_index
+        return extend_neg(seq, chrom_index, read_len), chrom_index
     return "", chrom_index
 
 def extend_pos(chrom_seq, chrom_index):
     return chrom_seq[chrom_index - 1 : chrom_index + ext_length - 1]
 
-def extend_neg(chrom_seq, chrom_index):
-    seq = chrom_seq[chrom_index - (ext_length - read_length) - 1 : chrom_index + read_length - 1]
-    return complementary(seq)
+def extend_neg(chrom_seq, chrom_index, read_len):
+    seq = chrom_seq[chrom_index - (ext_length - read_len) - 1 : chrom_index + read_len - 1]
+    return seq
 
 
 #Main
@@ -109,8 +99,11 @@ if len(args) < 2:
     print "usage: input_file extension"
     sys.exit(1)
 
-input_file_path = dataset_path + args[0]
+input_file_path = args[0]
 ext_length = int(args[1])
+extend = True
+if ext_length == 0:
+    extend = False
 
 last_pos = -1
 
@@ -122,18 +115,20 @@ with open(input_file_path, "r") as input_file:
             chrom_length[chrom] = length
         line = input_file.readline()
     #Process first line before loop
-    (id_seq, strand, chrom, pos) = get_sam_info(line)
+    (id_seq, strand, chrom, pos, read_len) = get_sam_info(line)
     chrom_in_use = chrom
     chrom_seq = get_chromosome_seq(chrom)
     #Seaarch for read from starting point
-    seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
+    if not extend:
+        ext_length = read_len
+    seq, start = extend_read(start, chrom_seq, strand, chrom, pos, read_len)
     if seq:
         print ">" + id_seq + "\n" + seq
 	last_pos = pos
 
     #Process rest of file
     for line in input_file:
-        (id_seq, strand, chrom, pos) = get_sam_info(line)
+        (id_seq, strand, chrom, pos, read_len) = get_sam_info(line)
         if chrom != '*':
             if chrom_in_use != chrom:
                 chrom_seq = get_chromosome_seq(chrom)
@@ -141,7 +136,9 @@ with open(input_file_path, "r") as input_file:
                 start = 0
                 last_pos = -1
             if pos > last_pos:
-                seq, start = extend_read(start, chrom_seq, strand, chrom, pos)
+                if not extend:
+                    ext_length = read_len
+                seq, start = extend_read(start, chrom_seq, strand, chrom, pos, read_len)
                 last_pos = pos
                 if seq:
                     print ">" + id_seq + "\n" + seq
