@@ -37,12 +37,12 @@ static const char* const usage[] = {
 	NULL
 };
 
-graph_t * load_graph(const char *, int, int, int);
+graph_t * load_graph(const char *, int, int, int, unsigned long *, unsigned long *, unsigned long *, unsigned long *);
 string_FIFO_t * extend_right(string_FIFO_t *, char *, int, int);
 
 graph_t * build_graph(double, double, int);
-int map_read(char *, int, int, graph_t *, node_FIFO_t *, int *, int);
-int map_input_read(char *, int, int, graph_t *, node_FIFO_t *, int *, int);
+int map_read(char *, int, int, graph_t *, node_FIFO_t *, int *, int, unsigned long *);
+int map_input_read(char *, int, int, graph_t *, node_FIFO_t *, int *, int, unsigned long *);
 node_t * get_successor(node_t *, int, char);
 
 FILE * get_file_info(FILE *, int *);
@@ -181,9 +181,15 @@ int main(int argc, const char * argv[]) {
 	int edges = (int)pow((double)4, k/2+1);
 	graph_t * dbg;
 
+	unsigned long kmer_total = 0;
+	unsigned long kmer_total_input = 0;
+	unsigned long reads_total = 0;
+	unsigned long reads_total_input = 0;
+
+
 	//Either build or load the graph
 	if(build_or_load == LOAD) {
-		dbg = load_graph(pattern, k/2, nodes, edges);
+		dbg = load_graph(pattern, k/2, nodes, edges, &reads_total, &reads_total_input, &kmer_total, &kmer_total_input);
 		if(!dbg) {
 			return 1;
 		}
@@ -274,7 +280,7 @@ int main(int argc, const char * argv[]) {
 				index = 0;
 				while( (index = get_next_substring(read, index, k, &sublen)) != -1 ) {
 					//Each substring should be mapped
-					if (map_read(read+index, sublen, k, dbg, q, last_seen, read_index)) {
+					if (map_read(read+index, sublen, k, dbg, q, last_seen, read_index, &kmer_total)) {
 						fprintf(stdout, "[ERROR] couldn't allocate\n");
 						return 1;
 					}
@@ -289,6 +295,8 @@ int main(int argc, const char * argv[]) {
 		}
 
 		fclose(fp);
+
+		reads_total = read_index;
 
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
@@ -340,7 +348,7 @@ int main(int argc, const char * argv[]) {
 				index = 0;
 				while( (index = get_next_substring(read, index, k, &sublen)) != -1 ) {
 					//Each substring should be mapped
-					if (map_input_read(read+index, sublen, k, dbg, q, last_seen, read_index)) {
+					if (map_input_read(read+index, sublen, k, dbg, q, last_seen, read_index, &kmer_total_input)) {
 						fprintf(stdout, "[ERROR] couldn't allocate\n");
 						return 1;
 					}
@@ -355,6 +363,9 @@ int main(int argc, const char * argv[]) {
 		}
 
 		fclose(fp);
+
+		reads_total_input = read_index;
+
 		free(last_seen);
 		free(read);
 		free(seq_buf);
@@ -416,16 +427,18 @@ int main(int argc, const char * argv[]) {
 		fclose(fp);
 	}
 
-	// Getting total
-	unsigned long total = 0;
-	unsigned long total_input = 0;
+	/*
+	// Getting total kmer
 	for(i=0; i<nodes; i++) {
 		for(j=0; j<nodes; j++) {
-			total += (unsigned long)dbg->nodes[i]->out_kstep[j]->count;
-			total_input += (unsigned long)dbg->nodes[i]->out_kstep[j]->input_count;
+			kmer_total += (unsigned long)dbg->nodes[i]->out_kstep[j]->count;
+			kmer_total_input += (unsigned long)dbg->nodes[i]->out_kstep[j]->input_count;
 		}
 	}
+	*/
 
+	unsigned long total = reads_total;
+	unsigned long total_input = reads_total_input;
 
 	unsigned long count;
 	unsigned long input_count;
@@ -758,6 +771,18 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Generating output: graph\n");
 		strncpy(out_file, out_pattern, BUFFER);
+		strcat(out_file, ".graph.info");
+		FILE * fp_info;
+		if( !(fp_info = fopen(out_file, "w+")) ) {
+			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
+			return 1;
+		}
+		fprintf(fp_info, "@reads_total\t%lu\n", reads_total);
+		fprintf(fp_info, "@reads_total_input\t%lu\n", reads_total_input);
+		fprintf(fp_info, "@kmer_total\t%lu\n", kmer_total);
+		fprintf(fp_info, "@kmer_total_input\t%lu\n", kmer_total_input);
+		fclose(fp_info);
+		strncpy(out_file, out_pattern, BUFFER);
 		strcat(out_file, ".graph.nodes");
 		FILE * fp_nodes;
 		if( !(fp_nodes = fopen(out_file, "w+")) ) {
@@ -811,12 +836,52 @@ int main(int argc, const char * argv[]) {
 }
 
 
-graph_t * load_graph(const char * pattern, int k, int nodes, int edges) {
+graph_t * load_graph(const char * pattern, int k, int nodes, int edges, unsigned long * reads_total, unsigned long * reads_total_input, unsigned long * kmer_total, unsigned long * kmer_total_input) {
 	int i;
 	char buf[BUFFER+1];
 	char * token;
 	const char sep[2] = "\t";
 	char args[5][BUFFER+1];
+
+	FILE * fp;
+	char file_path[BUFFER+1];
+	//Getting infos
+	strncpy(file_path, pattern, BUFFER);
+	strcat(file_path, ".graph.info");
+	if( !(fp = fopen(file_path, "r")) ) {
+		fprintf(stdout, "[ERROR] couldn't open %s\n", file_path);
+		return NULL;
+	}
+	fgets(buf, BUFFER, fp);
+	if(feof(fp)) {
+		fprintf(stdout, "[ERROR] unexpected EOF in %s\n", file_path);
+	}
+	token = strtok(buf, sep); //read first arg - ignore
+	token = strtok(NULL, sep); //second arg
+	*reads_total = atoi(token);
+	fgets(buf, BUFFER, fp);
+	if(feof(fp)) {
+		fprintf(stdout, "[ERROR] unexpected EOF in %s\n", file_path);
+	}
+	token = strtok(buf, sep); //read first arg - ignore
+	token = strtok(NULL, sep); //second arg
+	*reads_total_input = atoi(token);
+	fgets(buf, BUFFER, fp);
+	if(feof(fp)) {
+		fprintf(stdout, "[ERROR] unexpected EOF in %s\n", file_path);
+	}
+	token = strtok(buf, sep); //read first arg - ignore
+	token = strtok(NULL, sep); //second arg
+	*kmer_total = atoi(token);
+	fgets(buf, BUFFER, fp);
+	if(feof(fp)) {
+		fprintf(stdout, "[ERROR] unexpected EOF in %s\n", file_path);
+	}
+	token = strtok(buf, sep); //read first arg - ignore
+	token = strtok(NULL, sep); //second arg
+	*kmer_total_input = atoi(token);
+
+
 	//Allocate graph
 	graph_t * dbg;
 	if( !(dbg = (graph_t*)malloc(sizeof(graph_t))) ) {
@@ -833,11 +898,10 @@ graph_t * load_graph(const char * pattern, int k, int nodes, int edges) {
 		return NULL;
 	}
 
-	FILE * fp;
-	char file_path[BUFFER+1];
+
 	node_t * n;
 	int node_id;
-	strcpy(file_path, pattern);
+	strncpy(file_path, pattern, BUFFER);
 	strcat(file_path, ".graph.nodes");
 	if( !(fp = fopen(file_path, "r")) ) {
 		fprintf(stdout, "[ERROR] couldn't open %s\n", file_path);
@@ -879,7 +943,7 @@ graph_t * load_graph(const char * pattern, int k, int nodes, int edges) {
 	int n1_hash;
 
 	//Load one-step out edges
-	strcpy(file_path, pattern);
+	strncpy(file_path, pattern, BUFFER);
 	strcat(file_path, ".graph.edges.out");
 	if( !(fp = fopen(file_path, "r")) ) {
 		fprintf(stdout, "[ERROR] couldn't open %s\n", file_path);
@@ -919,7 +983,7 @@ graph_t * load_graph(const char * pattern, int k, int nodes, int edges) {
 	fclose(fp);
 
 	//Load k/2-step out edges
-	strcpy(file_path, pattern);
+	strncpy(file_path, pattern, BUFFER);
 	sprintf(buf, ".graph.edges.out.%dstep", k);
 	strcat(file_path, buf);
 	if( !(fp = fopen(file_path, "r")) ) {
@@ -992,7 +1056,7 @@ string_FIFO_t * extend_right(string_FIFO_t * q, char * str, int times, int l) {
 	return q;
 }
 
-int map_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, int * last_seen, int read_index) {
+int map_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, int * last_seen, int read_index, unsigned long * kmer_total) {
 	int i;
 	int fullhash;
 	node_t * n = dbg->nodes[hash(read, k/2)]; //Get starting node
@@ -1002,6 +1066,7 @@ int map_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, int * la
 	for (i=1; i<(k/2); i++) {
 		n = get_successor(n, k/2, *(read+i+k/2-1)); //Get the node corresponding to the right overlapping kmer
 		q = enqueue(q, n);
+		*kmer_total = *kmer_total + 1;
 		//printf("%x enqueued\n", n);
 	}
 	//Now start to add edges for contiguos kmer
@@ -1016,12 +1081,13 @@ int map_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, int * la
 		}
 
 		q = enqueue(q, n);
+		*kmer_total = *kmer_total + 1;
 	}
 
 	return 0;
 }
 
-int map_input_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, int * last_seen, int read_index) {
+int map_input_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, int * last_seen, int read_index, unsigned long * kmer_total_input) {
 	int i;
 	int fullhash;
 	node_t * n = dbg->nodes[hash(read, k/2)]; //Get starting node
@@ -1032,6 +1098,7 @@ int map_input_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, in
 		n = get_successor(n, k/2, *(read+i+k/2-1)); //Get the node corresponding to the right overlapping kmer
 		q = enqueue(q, n);
 		//printf("%x enqueued\n", n);
+		*kmer_total_input = *kmer_total_input + 1;
 	}
 	//Now start to add edges for contiguos kmer
 	for(; i<(l-k/2+1); i++) {
@@ -1045,6 +1112,7 @@ int map_input_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, in
 		}
 
 		q = enqueue(q, n);
+		*kmer_total_input = *kmer_total_input + 1;
 	}
 
 	return 0;
