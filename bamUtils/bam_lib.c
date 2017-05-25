@@ -57,6 +57,7 @@ region_t * get_next_region(myBam_t * myBam, region_t * region, int extension, in
 		}
 	}
 
+	if(start < 0) start=0;
 
 	if( strcmp(region->chromosome, myBam->header->target_name[myBam->aln->core.tid]) == 0 ) { //Remove duplicates
 		if(start <= region->start) {
@@ -68,8 +69,7 @@ region_t * get_next_region(myBam_t * myBam, region_t * region, int extension, in
 	strncpy(region->chromosome, myBam->header->target_name[myBam->aln->core.tid], 6);
 	region->start = start;
 	if(end > myBam->header->target_len[myBam->aln->core.tid]) {
-		*status = 1;
-		return region;
+		end = myBam->header->target_len[myBam->aln->core.tid];
 	}
 
 	region->end = end;
