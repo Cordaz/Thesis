@@ -45,7 +45,9 @@ edge_t * create_edge(node_t * from, node_t * to, int hashed) {
 	if ( ( new = (edge_t *)malloc(sizeof(edge_t)) ) ) {
 		new->id = hashed;
 		new->count = 0;
+		new->kmer_count = 0;
 		new->input_count = 0;
+		new->kmer_input_count = 0;
 		new->from = from;
 		new->to = to;
 	}

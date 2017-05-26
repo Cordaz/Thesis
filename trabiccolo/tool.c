@@ -58,6 +58,7 @@ int main(int argc, const char * argv[]) {
 	int s = 0;
 	int k = K;
 	int S = 0;
+	int r_arg = 0;
 	int l;
 	int num_of_subs = 2;
 	int psm_arg = 0;
@@ -73,6 +74,7 @@ int main(int argc, const char * argv[]) {
 		OPT_STRING('i', "input", &input_file, "Input file (Control)"),
 		OPT_STRING('e', "experiment", &experiment_file, "Experiment file"),
 		OPT_GROUP("Optional"),
+		OPT_BOOLEAN('R', "region-count", &r_arg, "Count occurences in region instead of total occurences"),
 		OPT_STRING('a', "adapters", &adapters_file, "Adapters file"),
 		OPT_INTEGER('k', "kmer", &k, "kmer length of graph (default 10)"),
 		OPT_INTEGER('N', "num-subs", &num_of_subs, "Accepted substitution in approximate counting (default 2, maximum 2)"),
@@ -164,6 +166,11 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "                  @params S 'true'\n");
 	} else {
 		fprintf(stdout, "                  @params S 'false'\n");
+	}
+	if(r_arg) {
+		fprintf(stdout, "                  @params R 'true': counting occurences in region\n");
+	} else {
+		fprintf(stdout, "                  @params R 'false': counting total occurences of kmer\n");
 	}
 	fprintf(stdout, "                  @params k %d\n", k);
 	fprintf(stdout, "                  @params N %d\n", num_of_subs);
@@ -437,8 +444,17 @@ int main(int argc, const char * argv[]) {
 	}
 	*/
 
-	unsigned long total = reads_total;
-	unsigned long total_input = reads_total_input;
+	unsigned long total;
+	unsigned long total_input;
+
+	const int R_arg = r_arg;
+	if(R_arg) {
+		total = reads_total;
+		total_input = reads_total_input;
+	} else {
+		total = kmer_total;
+		total_input = kmer_total_input;
+	}
 
 	unsigned long count;
 	unsigned long input_count;
@@ -586,15 +602,26 @@ int main(int argc, const char * argv[]) {
 					hash_half0 = hash(half0, k/2);
 					hash_half1 = hash(half1, k/2);
 					//printf("%s\t%s\t", half0, half1);
-					count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-					input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+					if(R_arg) {
+						count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+						input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+					} else {
+						count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_count;
+						input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_input_count;
+					}
+
 					freq = (double)count/total;
 					freq_input = (double)input_count/total_input;
 					if(freq >= freq_input) {
 						counts[i][g] += count;
 						input_counts[i][g] += input_count;
 						for(j=0; j<s; j++) {
-							psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+							if(R_arg) {
+								psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+							} else {
+								psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_count;
+							}
+
 						}
 					}
 					flag2 = get(q, kmer);
@@ -618,8 +645,14 @@ int main(int argc, const char * argv[]) {
 							hash_half0 = hash(half0, k/2);
 							hash_half1 = hash(half1, k/2);
 							//printf("%s\t%s\t", half0, half1);
-							count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-							input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+							if(R_arg) {
+								count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+								input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+							} else {
+								count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_count;
+								input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_input_count;
+							}
+
 							freq = (double)count/total;
 							freq_input = (double)input_count/total_input;
 							diff = freq / freq_input;
@@ -627,8 +660,11 @@ int main(int argc, const char * argv[]) {
 								counts[i][g] += count;
 								input_counts[i][g] += input_count;
 								for(j=0; j<s; j++) {
-									psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
-								}
+									if(R_arg) {
+										psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+									} else {
+										psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_count;
+									}								}
 							}
 
 							flag2 = get(q, kmer);
@@ -807,7 +843,7 @@ int main(int argc, const char * argv[]) {
 		}
 		fprintf(fp_nodes, "ID\tseq\n");
 		fprintf(fp_edges_out, "ID\tFrom\tTo\n");
-		fprintf(fp_edges_out_k, "ID\tFrom\tTo\tCount\tInput_count\n");
+		fprintf(fp_edges_out_k, "ID\tFrom\tTo\tCount\tKmer_count\tInput_count\tKmer_input_count\n");
 		for(i=0; i<nodes; i++) {
 			fprintf(fp_nodes, "%d\t%s\n", i, dbg->nodes[i]->seq);
 
@@ -816,7 +852,7 @@ int main(int argc, const char * argv[]) {
 			}
 
 			for(j=0; j<nodes; j++) {
-				fprintf(fp_edges_out_k, "%d\t%s\t%s\t%d\t%d\n", dbg->nodes[i]->out_kstep[j]->id, dbg->nodes[i]->seq, dbg->nodes[i]->out_kstep[j]->to->seq, dbg->nodes[i]->out_kstep[j]->count, dbg->nodes[i]->out_kstep[j]->input_count);
+				fprintf(fp_edges_out_k, "%d\t%s\t%s\t%d\t%d\t%d\t%d\n", dbg->nodes[i]->out_kstep[j]->id, dbg->nodes[i]->seq, dbg->nodes[i]->out_kstep[j]->to->seq, dbg->nodes[i]->out_kstep[j]->count, dbg->nodes[i]->out_kstep[j]->kmer_count, dbg->nodes[i]->out_kstep[j]->input_count, dbg->nodes[i]->out_kstep[j]->kmer_input_count);
 			}
 		}
 		fclose(fp_nodes);
@@ -841,7 +877,7 @@ graph_t * load_graph(const char * pattern, int k, int nodes, int edges, unsigned
 	char buf[BUFFER+1];
 	char * token;
 	const char sep[2] = "\t";
-	char args[5][BUFFER+1];
+	char args[7][BUFFER+1];
 
 	FILE * fp;
 	char file_path[BUFFER+1];
@@ -997,13 +1033,13 @@ graph_t * load_graph(const char * pattern, int k, int nodes, int edges, unsigned
 	while(!feof(fp)) {
 		token = strtok(buf, sep);
 		i=0;
-		while( token && i<5 ) { //Expecting five args
+		while( token && i<7 ) { //Expecting seven args
 			strcpy(args[i], token);
 			token = strtok(NULL, sep);
 			i++;
 		}
 		if(token) {
-			fprintf(stdout, "[ERROR] expecting 5 arguments, more found. Exit.\n");
+			fprintf(stdout, "[ERROR] expecting 7 arguments, more found. Exit.\n");
 			return NULL;
 		}
 		args[1][k] = '\0';
@@ -1016,7 +1052,9 @@ graph_t * load_graph(const char * pattern, int k, int nodes, int edges, unsigned
 			return NULL;
 		}
 		e->count = atoi(args[3]);
-		e->input_count = atoi(args[4]);
+		e->kmer_count = atoi(args[4]);
+		e->input_count = atoi(args[5]);
+		e->kmer_input_count = atoi(args[6]);
 		dbg->nodes[n0_hash]->out_kstep[n1_hash] = e;
 		dbg->nodes[n1_hash]->in_kstep[n0_hash] = e;
 		fgets(buf, BUFFER, fp);
@@ -1079,6 +1117,7 @@ int map_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, int * la
 			dbg->nodes[n0->id]->out_kstep[n->id]->count += 1;
 			last_seen[fullhash] = read_index;
 		}
+		dbg->nodes[n0->id]->out_kstep[n->id]->kmer_count += 1;
 
 		q = enqueue(q, n);
 		*kmer_total = *kmer_total + 1;
@@ -1110,6 +1149,7 @@ int map_input_read(char * read, int l, int k, graph_t * dbg, node_FIFO_t * q, in
 			dbg->nodes[n0->id]->out_kstep[n->id]->input_count += 1;
 			last_seen[fullhash] = read_index;
 		}
+		dbg->nodes[n0->id]->out_kstep[n->id]->kmer_input_count += 1;
 
 		q = enqueue(q, n);
 		*kmer_total_input = *kmer_total_input + 1;
