@@ -59,6 +59,7 @@ int main(int argc, const char * argv[]) {
 	int k = K;
 	int S = 0;
 	int r_arg = 0;
+	int std_arg = 0;
 	int l;
 	int num_of_subs = 2;
 	int psm_arg = 0;
@@ -74,6 +75,7 @@ int main(int argc, const char * argv[]) {
 		OPT_STRING('i', "input", &input_file, "Input file (Control)"),
 		OPT_STRING('e', "experiment", &experiment_file, "Experiment file"),
 		OPT_GROUP("Optional"),
+		OPT_BOOLEAN('I', "input-std-region", &std_arg, "Input is an already counted STD region file"),
 		OPT_BOOLEAN('R', "region-count", &r_arg, "Count occurences in region instead of total occurences"),
 		OPT_STRING('a', "adapters", &adapters_file, "Adapters file"),
 		OPT_INTEGER('k', "kmer", &k, "kmer length of graph (default 10)"),
@@ -118,7 +120,7 @@ int main(int argc, const char * argv[]) {
 	}
 	if(!experiment_file) {
 		if(!pattern) {
-			fprintf(stdout, "[ERROR] required group 1 or 2 should be specified\n\n");
+			fprintf(stdout, "[ERROR] required group 1 or 2  should be specified\n\n");
 			argparse_usage(&argparse);
 			return 0;
 		}
@@ -129,7 +131,7 @@ int main(int argc, const char * argv[]) {
 	} else if (input_file && experiment_file) {
 		build_or_load = BUILD;
 	} else {
-		fprintf(stdout, "[ERROR] required group 1 or 2 should be specified\n\n");
+		fprintf(stdout, "[ERROR] required group 1 or 2  should be specified\n\n");
 		argparse_usage(&argparse);
 		return 0;
 	}
@@ -166,6 +168,11 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "                  @params S 'true'\n");
 	} else {
 		fprintf(stdout, "                  @params S 'false'\n");
+	}
+	if(!std_arg) {
+		fprintf(stdout, "                  @params I 'true'\n");
+	} else {
+		fprintf(stdout, "                  @params I 'false'\n");
 	}
 	if(r_arg) {
 		fprintf(stdout, "                  @params R 'true': counting occurences in region\n");
