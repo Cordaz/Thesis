@@ -655,8 +655,7 @@ int main(int argc, const char * argv[]) {
 
 							freq = (double)count/total;
 							freq_input = (double)input_count/total_input;
-							diff = freq / freq_input;
-							if(diff >= 1) {
+							if(freq >= freq_input) {
 								counts[i][g] += count;
 								input_counts[i][g] += input_count;
 								for(j=0; j<s; j++) {
