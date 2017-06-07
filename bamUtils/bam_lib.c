@@ -50,14 +50,16 @@ region_t * get_next_region(myBam_t * myBam, region_t * region, int extension, in
 	if(myBam->aln->core.flag == 0) {
 		if(extension) {
 			end = start + extension;
+			if(end > myBam->header->target_len[myBam->aln->core.tid]) end = myBam->header->target_len[myBam->aln->core.tid]; //Out of chromosome
 		}
+		region->strand = '+';
 	} else if(myBam->aln->core.flag == 16) {
 		if(extension) {
 			start = end - extension;
+			if(start < 0) start = 0; //Out of chromosome
 		}
+		region->strand = '-';
 	}
-
-	if(start < 0) start=0;
 
 	if( strcmp(region->chromosome, myBam->header->target_name[myBam->aln->core.tid]) == 0 ) { //Remove duplicates
 		if(start <= region->start) {
@@ -67,6 +69,7 @@ region_t * get_next_region(myBam_t * myBam, region_t * region, int extension, in
 	}
 
 	strncpy(region->chromosome, myBam->header->target_name[myBam->aln->core.tid], 6);
+	region->chrom_index = myBam->aln->core.tid;
 	region->start = start;
 	if(end > myBam->header->target_len[myBam->aln->core.tid]) {
 		end = myBam->header->target_len[myBam->aln->core.tid];
@@ -76,6 +79,24 @@ region_t * get_next_region(myBam_t * myBam, region_t * region, int extension, in
 
 	*status = REG_COMPLETE;
 	return region;
+}
+
+region_t * get_before_region(region_t * region, region_t * before_region, chromosomes_info_t * chrom_info) {
+	int region_size = region->end - region->start + 1;
+	if(region->strand == '+') {
+		before_region->start = region->start - region_size;
+		if(before_region->start < 0) before_region->start = 0;
+		before_region->end = region->start;
+	} else {
+		before_region->start = region->end;
+		before_region->end = region->end + region_size;
+		if(before_region->end > chrom_info->sizes[region->chrom_index]) before_region->end = chrom_info->sizes[region->chrom_index];
+	}
+
+	strcpy(before_region->chromosome, region->chromosome);
+	before_region->chrom_index = region->chrom_index;
+
+	return before_region;
 }
 
 region_t * get_next_region_overlap(myBam_t * myBam, region_t * region, int extension, int * status) {
@@ -123,6 +144,7 @@ region_t * get_next_region_overlap(myBam_t * myBam, region_t * region, int exten
 
 	if(*status == REG_COMPLETE) {
 		strncpy(region->chromosome, myBam->header->target_name[myBam->aln->core.tid], 6);
+		region->chrom_index = myBam->aln->core.tid;
 		region->start = startpos;
 		region->end = endpos;
 
@@ -153,7 +175,7 @@ sequence_t * get_sequence(genome_t * genome, region_t * region, sequence_t * seq
 	if(!region) return NULL;
 
 	if( !genome->chromosome || strcmp(region->chromosome, genome->chromosome->name) != 0 ) {
-		if(!(genome = genome_load_chromosome(genome, region->chromosome)) ) {
+		if(!(genome = genome_load_chromosome(genome, region->chromosome, region->chrom_index)) ) {
 			fprintf(stdout, "[ERROR] can't load correctly %s\n", region->chromosome);
 			return NULL;
 		}

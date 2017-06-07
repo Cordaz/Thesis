@@ -29,7 +29,7 @@ void genome_clear(genome_t * genome) {
 	free(genome);
 }
 
-genome_t * genome_load_chromosome(genome_t * genome, char * chromosome_name) {
+genome_t * genome_load_chromosome(genome_t * genome, char * chromosome_name, int chrom_index) {
 	if(!genome->chromosome) {
 		if(!(genome->chromosome = (chromosome_t*)malloc(sizeof(chromosome_t)))) {
 			fprintf(stdout, "[ERROR] can't allocate\n");
@@ -43,12 +43,9 @@ genome_t * genome_load_chromosome(genome_t * genome, char * chromosome_name) {
 	}
 
 	//printf("LOADING %s\n", chromosome_name);
-
-	int index;
-	index = get_chrom_index(genome->info, chromosome_name);
-	genome->chromosome->index = index;
+	genome->chromosome->index = chrom_index;
 	int size;
-	size = genome->info->sizes[index];
+	size = genome->info->sizes[chrom_index];
 	genome->chromosome->size = size;
 	strcpy(genome->chromosome->name, chromosome_name);
 

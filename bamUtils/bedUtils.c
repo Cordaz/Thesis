@@ -76,8 +76,11 @@ int main(int argc, const char * argv[]) {
 		return -1;
 	}
 	sequence_t * sequence = NULL;
-	//NO HEADER
 	fgets(buf, BUFFER, bed_fp);
+	if(buf[3] == 'o') {
+		//there is the header, read new line
+		fgets(buf, BUFFER, bed_fp);
+	}
 	while(!feof(bed_fp)) {
 		token = strtok(buf, "\t");
 		strncpy(region->chromosome, token, 5);
@@ -86,7 +89,7 @@ int main(int argc, const char * argv[]) {
 		token = strtok(NULL, "\t");
 		region->end = atoi(token);
 
-		sequence = get_sequence(genome, region, sequence);
+		if(!(sequence = get_sequence(genome, region, sequence))) return 1;
 		fprintf(fa_fp, ">%s:%d-%d\n%s\n", region->chromosome, region->start, region->end, sequence->seq);
 
 		fgets(buf, BUFFER, bed_fp);

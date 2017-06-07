@@ -59,11 +59,21 @@
 	 */
 	region_t * get_next_region(myBam_t *, region_t *, int, int *);
 
+	/*
+	 * Get the region before (i.e. actually before if pos strand, otherwise the after) of the given region.
+	 * @param region region struct of which to find the before
+	 * @param before_region the initialized region struct to build the to return region
+	 * @param chrom_info chromosome_info struct to guarantee that the region would be within the chromosome border
+	 * @return before_region
+	 *
+	 */
+	region_t * get_before_region(region_t *, region_t *, chromosomes_info_t *);
+
 
 	/*
 	 * Requires both mybam and region to be well initialized, skip control
 	 * @param myBam BAM struct (see definition above)
-	 * #param region region struct (see definition above)
+	 * @param region region struct (see definition above)
 	 * @param extension size of extension (otherwise use original size)
 	 * @param *status is 0 if region is completed, 1 if is still under construction, -1 if bam is EOF
 	 * @return region or NULL if error occurred
