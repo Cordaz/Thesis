@@ -174,7 +174,7 @@ class mvGHMM(object):
         new_model = {}
 
         if not self.fixedPi:
-            new_model['pi'] = reestimatePi(variables['gamma'][0])
+            new_model['pi'] = self.reestimatePi(variables['gamma'][0])
         if not self.fixedA:
             new_model['A'] = self.reestimateA(observ,variables['xi'],variables['gamma'])
         new_means, new_covars = self.reestimateGaussian(observ,variables['gamma'])
@@ -198,7 +198,7 @@ class mvGHMM(object):
 
     # Helper method of reestimate: reestimate matrix A
 
-    def reestimateA(self,xi,gamma):
+    def reestimateA(self,observ,xi,gamma):
         new_A = np.zeros((self.n, self.n), dtype=self.precision)
         for i in xrange(self.n):
             for j in xrange(self.n):
