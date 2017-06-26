@@ -1,5 +1,7 @@
 import numpy as np
 import lib.safemath as safemath
+import random as rand
+from scipy.stats import multivariate_normal
 
 '''
 
@@ -85,10 +87,7 @@ class mvGHMM(object):
     # Helper method of calcvariable: compute the (logarithm) value of alpha (forward variable).
 
     def calcalpha(self, observ):
-        alpha = np.ones((len(observ),self.n),dtype=self.precision)
-        for t in xrange(len(observ)):
-            for j in xrange(self.n):
-                alpha[t][j] = safemath.LOGZERO
+        alpha = np.ones((len(observ),self.n),dtype=self.precision) # allocation
 
         # init stage - alpha_1(x) = pi(x)b_x(O1)
         for x in xrange(self.n):
@@ -97,9 +96,10 @@ class mvGHMM(object):
         # induction
         for t in xrange(1,len(observ)):
             for j in xrange(self.n):
+                logalpha = safemath.LOGZERO
                 for i in xrange(self.n):
-                    alpha[t][j] = safemath.safelnsum(alpha[t][j], safemath.safelnprod(alpha[t-1][i], safemath.safeln(self.A[i][j])))
-                alpha[t][j] = safemath.safelnprod(alpha[t][j], safemath.safeln(self.B[j][t]))
+                    logalpha = safemath.safelnsum( logalpha, safemath.safelnprod(alpha[t-1][i], safemath.safeln(self.A[i][j])) )
+                alpha[t][j] = safemath.safelnprod(logalpha, safemath.safeln(self.B[j][t]))
 
         return alpha
 
@@ -219,23 +219,23 @@ class mvGHMM(object):
         new_covars = [ np.matrix(np.zeros((self.d,self.d), dtype=self.precision)) for i in xrange(self.n) ]
 
         for j in xrange(self.n):
-            numer = 0.0
+            numer = [0.0] * self.d
             denom = 0.0
             for t in xrange(len(observ)):
                 numer += safemath.safeexp(gamma[t][j]) * observ[t]
                 denom += safemath.safeexp(gamma[t][j])
             new_means[j] = numer/denom
 
-        #covars_prior = [ np.matrix(0.001*np.eye(self.d, dtype=self.precision)) for i in xrange(self.n) ]
+        #covars_prior = [ np.matrix(0.001*np.eye(self.d, dtype=self.precision)) for i in xrange(self.n) ] # in case of underflowing
         for j in xrange(self.n):
             numer = np.matrix(np.zeros( (self.d,self.d), dtype=self.precision))
             denom = np.matrix(np.zeros( (self.d,self.d), dtype=self.precision))
             for t in xrange(len(observ)):
                 vector_as_mat = np.matrix( (observ[t]-self.means[j]), dtype=self.precision )
-                numer += safemath.safeexp(gamma[t][j])*np.dot(vector_as_mat.T, vector_as_mat)
+                numer += safemath.safeexp(gamma[t][j]) * np.dot(vector_as_mat.T, vector_as_mat)
                 denom += safemath.safeexp(gamma[t][j])
             new_covars[j] = numer/denom
-            #new_covars[j] += new_covars[j] + covars_prior[j]
+            #new_covars[j] += new_covars[j] + covars_prior[j] # in case of underflowing
 
         return new_means, new_covars
 
@@ -243,12 +243,8 @@ class mvGHMM(object):
     # Compute the PDF of value x given N(mean,covar) (multivariate gaussian)
 
     def pdf(self,x,mean,covar):
-        det = np.linalg.det(covar)
-
-        c = (1 / ( (2.0*np.pi)**(float(self.d/2.0)) * (det)**(0.5)))
-        val = c * np.exp(-0.5 * np.dot( np.dot((x-mean),covar.I), (x-mean) ) )
-
-        return val
+        dist = multivariate_normal(mean=mean, cov=covar)
+        return dist.pdf(x)
 
 
     # Compute the probability of the observation given the model,
@@ -259,7 +255,11 @@ class mvGHMM(object):
             self.calcB(observ)
 
         alpha = self.calcalpha(observ)
-        return np.log(sum(alpha[-1]))
+
+        loglikelihood = safemath.LOGZERO
+        for i in xrange(self.n):
+            loglikelihood = safemath.safelnsum( loglikelihood, alpha[-1][i] )
+        return loglikelihood
 
 
     # Find the path that maximizes the loglikelihood.
@@ -312,10 +312,15 @@ class mvGHMM(object):
 
     # Updates the HMMs parameters given a new set of observed sequences.
 
-    def train(self,observ,iterations=1,eps=0.0001,threshold=-0.001):
-        self.calcB(observ)
+    def train(self,observ,iterations=1,randomize=True,eps=0.0001,threshold=-0.001):
+        if randomize:
+            obs = self.randomizeobserv(observ)
+        else:
+            obs = observ
+
+        self.calcB(obs)
         for i in xrange(iterations):
-            old_p, new_p = self.performiter(observ)
+            old_p, new_p = self.performiter(obs)
             if self.verbose:
                 print "iter: ", i, ", L(model|O)= ", old_p, ", L(new_model|O)= ", new_p, ", converging= ", ( new_p-old_p > threshold )
 
@@ -357,3 +362,13 @@ class mvGHMM(object):
 
         #M-step
         return self.reestimate(variables,observ)
+
+
+    # Randomize observation vector
+
+    def randomizeobserv(self,observ):
+        obs = observ.copy()
+
+        rand.shuffle(obs)
+
+        return obs
