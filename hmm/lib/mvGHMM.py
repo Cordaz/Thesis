@@ -312,15 +312,10 @@ class mvGHMM(object):
 
     # Updates the HMMs parameters given a new set of observed sequences.
 
-    def train(self,observ,iterations=1,randomize=True,eps=0.0001,threshold=-0.001):
-        if randomize:
-            obs = self.randomizeobserv(observ)
-        else:
-            obs = observ
-
-        self.calcB(obs)
+    def train(self,observ,iterations=1,eps=0.0001,threshold=-0.001):
+        self.calcB(observ)
         for i in xrange(iterations):
-            old_p, new_p = self.performiter(obs)
+            old_p, new_p = self.performiter(observ)
             if self.verbose:
                 print "iter: ", i, ", L(model|O)= ", old_p, ", L(new_model|O)= ", new_p, ", converging= ", ( new_p-old_p > threshold )
 
@@ -362,13 +357,3 @@ class mvGHMM(object):
 
         #M-step
         return self.reestimate(variables,observ)
-
-
-    # Randomize observation vector
-
-    def randomizeobserv(self,observ):
-        obs = observ.copy()
-
-        rand.shuffle(obs)
-
-        return obs
