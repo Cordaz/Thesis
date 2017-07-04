@@ -93,7 +93,7 @@ x <- seq(0.5,1,0.0001)
 png(paste(as.character(nstates), "_mixture.png", collapse=NULL, sep=''), width=4*600, height=5*600, res=600, pointsize=10)
 par(mfrow=c(nfeatures+1,1),mar=c(2,2,1,1))
 
-colors <- brewer.pal(nfeatures, "Spectral")
+colors <- brewer.pal(nfeatures, "Set1")
 
 plot(kd.x[,1], kd.y[,1] * t.stddev[1], col=colors[1], type="l", main="Original ditribution", xlab=NULL, ylab=NULL, xlim=c(0.5,1), ylim=c(0, max.kd))
 for (i in 2:nfeatures) {
@@ -151,7 +151,7 @@ t <- cbind(t, PROB_STATES)
 
 # cannot do in more than 2 dim
 if (nfeatures == 2) {
-	colors <- brewer.pal(nstates, "Spectral")
+	colors <- brewer.pal(nstates, "Set1")
 	png(paste(as.character(nstates), "_states_mix.png", collapse=NULL, sep=""), width=7*600, height=7*600, res=600, pointsize=10)
 	plot(t[t$STATES==0,score_col[1]], t[t$STATES==0, score_col[2]], col=colors[1], xlim=c(0.5,1), ylim=c(0.5,1), main="Assigned states", xlab="Score 0", ylab="Score 1")
 	for (i in 2:nstates) {
