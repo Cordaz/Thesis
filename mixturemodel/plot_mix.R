@@ -8,7 +8,6 @@ if (length(args) == 0) {
 	q()
 }
 scores_list = strsplit(paste(args[1], collapse=NULL), ",")
-# print(mu_list)
 score_col = c()
 for(i in 1:length(scores_list)) {
 	score_col <- c(score_col, as.numeric(scores_list[[i]]))
@@ -22,7 +21,7 @@ library(mixtools)
 library(RColorBrewer)
 
 ### combine function
-# creates all combination of a [nxd] matrix to a [d^n, n] matrix, with one element per row
+# creates all combination of a [nxm] matrix to a [m^n, n] matrix, with one element per row
 # | a b c d |    | a e i |
 # | e f g h | -> | a e j |
 # | i j k l \    |  ...  |
@@ -228,9 +227,32 @@ dev.off(dev.zscore)
 
 
 ### print output
-print(mu)
-print(mu.zscore)
-print(sigma)
-print(counts)
+# create names
+names <- "Component 1"
+for (i in 2:nfeatures) {
+	names <- cbind(names, paste("Component ", as.character(i), collapse=NULL, sep=''))
+}
+colnames(mu) <- names
+colnames(mu.zscore) <- names
+colnames(sigma) <- names
 
-write.table(t, paste(file, ".out", collapse=NULL, sep=""), sep="\t", append=FALSE, quote=FALSE, eol="\n", row.names=FALSE, col.names=names(t))
+names <- "State 0"
+for (i in 2:nstates) {
+	names <- cbind(names, paste("State ", as.character(i-1), collapse=NULL, sep=''))
+}
+rownames(mu) <- names
+rownames(mu.zscore) <- names
+rownames(sigma) <- names
+names(counts) <- names
+outfile <- paste(file, paste(as.character(nstates), "states.stats", collapse=NULL,sep=''), collapse=NULL, sep='')
+cat(as.character(nstates), file=outfile, append=F)
+cat(" states: stats\n>Means\n\t\t", file=outfile, append=T)
+write.table(mu, file=outfile, append=T, sep='\t', eol='\n', quote=F)
+cat("\n>Means (Z-score)\n\t\t", file=outfile, append=T)
+write.table(mu.zscore, file=outfile, append=T, sep='\t', eol='\n', quote=F)
+cat("\n>Variances\n\t\t", file=outfile, append=T)
+write.table(sigma, file=outfile, append=T, sep='\t', eol='\n', quote=F)
+cat("\n>Counts\n", file=outfile, append=T)
+write.table(counts, file=outfile, append=T, sep='\t', eol='\n', quote=F, col.names=F)
+
+write.table(t, paste(file, paste(as.character(nstates), "states.tables", collapse=NULL,sep=''), collapse=NULL, sep=''), sep="\t", append=FALSE, quote=FALSE, eol="\n", row.names=FALSE, col.names=names(t))
