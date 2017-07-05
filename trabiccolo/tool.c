@@ -41,6 +41,8 @@ static const char* const usage[] = {
 	NULL
 };
 
+const char BASES[4] = {'A','C','G','T'};
+
 int ** update_psm(int **, int, char *, int);
 
 graph_t * load_graph(const char *, int, int, int, unsigned long *, unsigned long *, unsigned long *, unsigned long *);
@@ -753,12 +755,14 @@ int main(int argc, const char * argv[]) {
 	}
 	fprintf(fp, "\n");
 	for(i=0; i<expected_smer; i++) {
-		rev_hash(i, s, smer);
+		smer = smers[i];
+		/*
 		if( search(adapters, smer) ) {
 			for(j=0; j<s; j++) {
 				smer[j] = tolower(smer[j]);
 			}
 		}
+		*/
 		sum_of_entropy = 0.0;
 		sum_of_entropy_count = 0.0;
 		fprintf(fp, "%s", smer);
@@ -820,13 +824,44 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "[ERROR] couldn't allocate\n");
 		return 1;
 	}
+	int * positions;
+	if( !(positions = (int*)malloc(sizeof(int) * to_select)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+
+	int limit = num_of_subs + 1; // TODO
 
 	bit_array_t * flagged = init_bit_array(expected_smer);
+	// Check for adapters only if existing list
+	if(adapters) {
+		for(i=0; i<expected_smer; i++) {
+			if( search(adapters, smers[sorted[i]]) ) {
+				if(!(flagged = set_on_bit(flagged, i))) {return 1;}
+				for(j=0; j<expected_smer; j++) {
+					if(dist(smers[sorted[i]], smers[sorted[j]], s, limit) < limit) {
+						if(!(flagged = set_on_bit(flagged, j))) {return 1;}
+					}
+				}
+			}
+		}
+	}
+
 	int processed = 0;
 	int selected = -1;
 	int hash_val;
 	int rev_index;
-	int limit = num_of_subs + 1; // TODO
+
+	int * minus, * plus;
+	if( !(minus = (int*)malloc(sizeof(int) * to_select)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+	if( !(plus = (int*)malloc(sizeof(int) * to_select)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+
 	while (processed < to_select) {
 		do {
 			selected++;
@@ -836,8 +871,11 @@ int main(int argc, const char * argv[]) {
 			break;
 		}
 		motifs[processed] = sorted[selected];
+		positions[processed] = selected;
 		//printf("\t%d\n", motifs[processed]);
 		psm[processed] = update_psm(psm[processed], s, smers[sorted[selected]], counts[sorted[selected]][0]);
+		plus[processed] = 1;
+		minus[processed] = 0;
 		flagged = set_on_bit(flagged, selected);
 		if(!flagged) { return 1; }
 
@@ -855,6 +893,9 @@ int main(int argc, const char * argv[]) {
 			if (dist(smers[sorted[selected]], smers[sorted[i]], s, limit) < limit) {
 				if (measures[sorted[i]] > 0) {
 					psm[processed] = update_psm(psm[processed], s, smers[sorted[i]], counts[sorted[i]][0]);
+					plus[processed]++;
+				} else {
+					minus[processed]++;
 				}
 				flagged = set_on_bit(flagged, i);
 				// Also here flag rev comp
@@ -917,9 +958,11 @@ int main(int argc, const char * argv[]) {
 				return 1;
 			}
 			fprintf(html_fp, "<h3>%s</h3>\n<table>\n", smers[motifs[i]]);
+			fprintf(html_fp, "<p>Starting kmer index: %d</p>\n", positions[i]);
+			fprintf(html_fp, "<p>Used: %d kmers<br/>Discarded: %d kmers</p>\n", plus[i], minus[i]);
 
 			for(h=0; h<4; h++) {
-				fprintf(html_fp, "<tr>");
+				fprintf(html_fp, "<tr><td><b>%c</b></td>", BASES[h]);
 				for(j=0; j<s-1; j++) {
 					fprintf(fp, "%d\t", psm[i][h][j]);
 					fprintf(html_fp, "<td>%d</td>", psm[i][h][j]);
