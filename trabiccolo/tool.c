@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <ctype.h>
 #include "../utilities/data_structures.h"
@@ -12,6 +14,8 @@
 #include "../utilities/node_FIFO.h"
 #include "../utilities/argparse.h"
 #include "../utilities/list.h"
+#include "../utilities/sorting.h"
+#include "../utilities/bit_array.h"
 
 #ifdef SILENT
 	#define printf(...)
@@ -37,6 +41,8 @@ static const char* const usage[] = {
 	NULL
 };
 
+int ** update_psm(int **, int, char *, int);
+
 graph_t * load_graph(const char *, int, int, int, unsigned long *, unsigned long *, unsigned long *, unsigned long *);
 string_FIFO_t * extend_right(string_FIFO_t *, char *, int, int);
 
@@ -48,6 +54,9 @@ node_t * get_successor(node_t *, int, char);
 FILE * get_file_info(FILE *, int *);
 
 int main(int argc, const char * argv[]) {
+	char rscript_path[BUFFER];
+	strcpy(rscript_path, argv[0]);
+
 	//Setup
 	const char * pattern = NULL;
 	const char * out_p = NULL;
@@ -60,7 +69,7 @@ int main(int argc, const char * argv[]) {
 	int S = 0;
 	int r_arg = 0;
 	int l;
-	int num_of_subs = 2;
+	int num_of_subs = 1;
 	int psm_arg = 0;
 	int g_arg = 0;
 	int build_or_load = 0;
@@ -470,6 +479,7 @@ int main(int argc, const char * argv[]) {
 	int expected_smer;
 	expected_smer = (int)pow((double)4, s);
 
+	/*
 	//// Matrix for position specific count
 	int *** psm; //Position Specific Matrix
 	if( !(psm = (int***)malloc(sizeof(int**) * expected_smer)) ) {
@@ -491,6 +501,7 @@ int main(int argc, const char * argv[]) {
 			}
 		}
 	}
+	*/
 
 	//Counters
 	unsigned long ** counts;
@@ -615,14 +626,15 @@ int main(int argc, const char * argv[]) {
 					if(freq >= freq_input) {
 						counts[i][g] += count;
 						input_counts[i][g] += input_count;
+						/*
 						for(j=0; j<s; j++) {
 							if(R_arg) {
 								psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
 							} else {
 								psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_count;
 							}
-
 						}
+						*/
 					}
 					flag2 = get(q, kmer);
 				}
@@ -658,12 +670,15 @@ int main(int argc, const char * argv[]) {
 							if(freq >= freq_input) {
 								counts[i][g] += count;
 								input_counts[i][g] += input_count;
+								/*
 								for(j=0; j<s; j++) {
 									if(R_arg) {
 										psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
 									} else {
 										psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_count;
-									}								}
+									}
+								}
+								*/
 							}
 
 							flag2 = get(q, kmer);
@@ -695,13 +710,18 @@ int main(int argc, const char * argv[]) {
 	free(half0);
 	free(half1);
 	free(kmer);
-	free(rev_smer);
 
 
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
 	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 	fprintf(stdout, "Occurences counted\n");
+
+	double * measures;
+	if( !(measures = (double*)malloc(sizeof(double) * expected_smer)) ) {
+		fprintf(stdout, "[ERROR] cannot allocate\n");
+		return 1;
+	}
 
 	//// OUTPUT
 	char out_file[BUFFER+1];
@@ -756,47 +776,175 @@ int main(int argc, const char * argv[]) {
 		if(num_of_subs >= 1) {
 			fprintf(fp, "\t%lf\t%lf", sum_of_entropy, sum_of_entropy_count);
 		}
+		measures[i] = sum_of_entropy; // TODO here define the final measure
 
 		fprintf(fp, "\n");
 
 	}
 	fclose(fp);
 
+	/////////////////////// NEW
+
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
+	fprintf(stdout, "Generating greedy matrix\n");
+
+	int * sorted = sort_index_decreasing(measures, expected_smer);
+
+	//// Matrix for position specific count
+	int to_select = 10; // TODO as arg
+	int *** psm; //Position Specific Matrix
+	if( !(psm = (int***)malloc(sizeof(int**) * to_select)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+	for(i=0; i<to_select; i++) {
+		if( !(psm[i] = (int**)malloc(sizeof(int*) * 4)) ) {
+			fprintf(stdout, "[ERROR] couldn't allocate\n");
+			return 1;
+		}
+		for(j=0; j<4; j++) {
+			if( !(psm[i][j] = (int*)malloc(sizeof(int) * s)) ) {
+				fprintf(stdout, "[ERROR] couldn't allocate\n");
+				return 1;
+			}
+			for(h=0; h<s; h++) {
+				psm[i][j][h] = 0;
+			}
+		}
+	}
+
+	int * motifs;
+	if( !(motifs = (int*)malloc(sizeof(int) * to_select)) ) {
+		fprintf(stdout, "[ERROR] couldn't allocate\n");
+		return 1;
+	}
+
+	bit_array_t * flagged = init_bit_array(expected_smer);
+	int processed = 0;
+	int selected = -1;
+	int hash_val;
+	int rev_index;
+	int limit = num_of_subs + 1; // TODO
+	while (processed < to_select) {
+		do {
+			selected++;
+			//printf("\t%s\t%d\t%d\n", smers[sorted[selected]], selected, sorted[selected]);
+		} while(selected < expected_smer && get_bit(flagged, selected));
+		if (selected >= expected_smer) {
+			break;
+		}
+		motifs[processed] = sorted[selected];
+		//printf("\t%d\n", motifs[processed]);
+		psm[processed] = update_psm(psm[processed], s, smers[sorted[selected]], counts[sorted[selected]][0]);
+		flagged = set_on_bit(flagged, selected);
+		if(!flagged) { return 1; }
+
+		// Flag also the reverse comp
+		reverse_kmer(smers[sorted[selected]], rev_smer, s);
+		hash_val = hash(rev_smer, s);
+		rev_index = get_pos(sorted, selected+1, expected_smer, hash_val);
+		//printf("%s\t%s\t%d\t%d\n", smers[sorted[selected]], smers[hash_val], hash_val, rev_index);
+		if(rev_index >= 0 && rev_index < expected_smer) {
+			flagged = set_on_bit(flagged, rev_index);
+			if(!flagged) { return 1; }
+		}
+
+		for(i=selected+1; i<expected_smer; i++) {
+			if (dist(smers[sorted[selected]], smers[sorted[i]], s, limit) < limit) {
+				if (measures[sorted[i]] > 0) {
+					psm[processed] = update_psm(psm[processed], s, smers[sorted[i]], counts[sorted[i]][0]);
+				}
+				flagged = set_on_bit(flagged, i);
+				// Also here flag rev comp
+				reverse_kmer(smers[sorted[i]], rev_smer, s);
+				hash_val = hash(rev_smer, s);
+				rev_index = get_pos(sorted, i+1, expected_smer, hash_val);
+				//printf("%s\t%s\t%d\t%d\n", smers[sorted[selected]], smers[hash_val], hash_val, rev_index);
+				if(rev_index >= 0 && rev_index < expected_smer) {
+					flagged = set_on_bit(flagged, rev_index);
+					if(!flagged) { return 1; }
+				}
+			}
+		}
+
+		processed++;
+	}
+	/////////////////////// END NEW
 	//Output psm
 	if(psm_arg) {
+		//printf("%s\n", rscript_path);
+		char * str_ptr = strrchr(rscript_path, '/');
+		strcpy(str_ptr, "/");
+		//printf("%s\n", str_ptr);
+
+		char rscript[BUFFER];
+		sprintf(rscript, "Rscript %slogo.R ", rscript_path);
+		char cmd[BUFFER];
+
+		// Creating subdirectory
+		struct stat st = {0};
+
+		if (stat(out_pattern, &st) == -1) {
+			 mkdir(out_pattern, 0700);
+		}
+
+		char dir[BUFFER];
+		snprintf(dir, BUFFER, "%s/", out_pattern);
+
+		char html_file[BUFFER];
+		snprintf(html_file, BUFFER, "%s.motifs.html", out_pattern);
+
+		FILE * html_fp;
+		if( !(html_fp = fopen(html_file, "w+")) ) {
+			fprintf(stdout, "[ERROR] can't open %s\n", html_file);
+			return 1;
+		}
+		fprintf(html_fp, "<html>\n<head>\n<title>%s - Motifs</title>\n</head>\n\n<body>\n", out_pattern);
+
 		time ( &rawtime );
 		timeinfo = localtime ( &rawtime );
 		fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
 		fprintf(stdout, "Generating output: position specific matrix\n");
-		strncpy(out_file, out_pattern, BUFFER);
-		strcat(out_file, ".psm");
-		if( !(fp = fopen(out_file, "w+")) ) {
-			fprintf(stdout, "[ERROR] can't open %s\n", out_file);
-			return 1;
+
+		for(i=0; i<to_select; i++) {
+			strncpy(out_file, dir, BUFFER);
+			sprintf(buf, "%d_%s.psm", i+1, smers[motifs[i]]);
+			strcat(out_file, buf);
+			if( !(fp = fopen(out_file, "w+")) ) {
+				fprintf(stdout, "[ERROR] can't open %s\n", out_file);
+				return 1;
+			}
+			fprintf(html_fp, "<h3>%s</h3>\n<table>\n", smers[motifs[i]]);
+
+			for(h=0; h<4; h++) {
+				fprintf(html_fp, "<tr>");
+				for(j=0; j<s-1; j++) {
+					fprintf(fp, "%d\t", psm[i][h][j]);
+					fprintf(html_fp, "<td>%d</td>", psm[i][h][j]);
+				}
+				fprintf(fp, "%d\n", psm[i][h][s-1]);
+				fprintf(html_fp, "<td>%d</td></tr>\n", psm[i][h][s-1]);
+			}
+			fclose(fp);
+
+			fprintf(html_fp, "</table>\n");
+
+			// Run R script to plot sequence logo
+			strcpy(cmd, rscript);
+			strcat(cmd, dir);
+			strcat(cmd, buf);
+			time ( &rawtime );
+			timeinfo = localtime ( &rawtime );
+			fprintf(stdout, "[%02d:%02d:%02d][%5d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, pid);
+			fprintf(stdout, "Exectuing '%s'\n", cmd);
+			system(cmd);
+
+			fprintf(html_fp, "<img src='%s%s.png' width='800px' height='300px'/>\n\n", dir, buf);
 		}
 
-		for(i=0; i<expected_smer; i++) {
-			fprintf(fp, "%s\n", smers[i]);
-			fprintf(fp, "A");
-			for(j=0; j<s; j++) {
-				fprintf(fp, "\t%d", psm[i][0][j]);
-			}
-			fprintf(fp, "\nC");
-			for(j=0; j<s; j++) {
-				fprintf(fp, "\t%d", psm[i][1][j]);
-			}
-			fprintf(fp, "\nG");
-			for(j=0; j<s; j++) {
-				fprintf(fp, "\t%d", psm[i][2][j]);
-			}
-			fprintf(fp, "\nT");
-			for(j=0; j<s; j++) {
-				fprintf(fp, "\t%d", psm[i][3][j]);
-			}
-			fprintf(fp, "\n\n");
-		}
-
-		fclose(fp);
+		fprintf(html_fp, "</body>\n</html>");
 	}
 
 	//Output graph
@@ -869,6 +1017,18 @@ int main(int argc, const char * argv[]) {
 
 	return 0;
 }
+
+
+
+int ** update_psm(int ** psm, int s, char * smer, int count) {
+	int i;
+	for (i=0; i<s; i++) {
+		psm[get_base_index(smer[i])][i] += count;
+	}
+
+	return psm;
+}
+
 
 
 graph_t * load_graph(const char * pattern, int k, int nodes, int edges, unsigned long * reads_total, unsigned long * reads_total_input, unsigned long * kmer_total, unsigned long * kmer_total_input) {
