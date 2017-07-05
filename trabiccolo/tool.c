@@ -957,9 +957,10 @@ int main(int argc, const char * argv[]) {
 				fprintf(stdout, "[ERROR] can't open %s\n", out_file);
 				return 1;
 			}
-			fprintf(html_fp, "<h3>%s</h3>\n<table>\n", smers[motifs[i]]);
-			fprintf(html_fp, "<p>Starting kmer index: %d</p>\n", positions[i]);
+			fprintf(html_fp, "<h3>%s</h3>\n", smers[motifs[i]]);
+			fprintf(html_fp, "<p>Starting kmer index: %d</p>\n", positions[i]+1);
 			fprintf(html_fp, "<p>Used: %d kmers<br/>Discarded: %d kmers</p>\n", plus[i], minus[i]);
+			fprintf(html_fp, "<table>\n");
 
 			for(h=0; h<4; h++) {
 				fprintf(html_fp, "<tr><td><b>%c</b></td>", BASES[h]);
