@@ -742,6 +742,8 @@ int main(int argc, const char * argv[]) {
 
 	double sum_of_entropy;
 	double sum_of_entropy_count;
+	double sum_freq;
+	double sum_freq_in;
 
 	fprintf(fp, "k-mer\tIP_count_0\tIP_freq_0\tInput_count_0\tInput_freq_0\tdiff_0\tdiff_log2_0\tentropy_0\tentropy_count_0");
 	if(num_of_subs >= 1) {
@@ -765,10 +767,15 @@ int main(int argc, const char * argv[]) {
 		*/
 		sum_of_entropy = 0.0;
 		sum_of_entropy_count = 0.0;
+		sum_freq = 0.0;
+		sum_freq_in = 0.0;
 		fprintf(fp, "%s", smer);
 		for(g=0; g <= num_of_subs; g++) {
 			freq = (double)counts[i][g]/(double)total;
 			freq_input = (double)input_counts[i][g]/(double)total_input;
+			//printf("%lu\t%lu\t%lf\t%lu\t%lu\t%lf\n", counts[i][g], total, freq, input_counts[i][g], total_input, freq_input);
+			sum_freq += freq;
+			sum_freq_in += freq_input;
 			diff = freq/freq_input;
 			diff_log2 = log2(diff);
 			entropy = freq* diff_log2;
@@ -780,7 +787,7 @@ int main(int argc, const char * argv[]) {
 		if(num_of_subs >= 1) {
 			fprintf(fp, "\t%lf\t%lf", sum_of_entropy, sum_of_entropy_count);
 		}
-		measures[i] = sum_of_entropy; // TODO here define the final measure
+		measures[i] = log2( sum_freq / sum_freq_in ); // TODO here define the final measure
 
 		fprintf(fp, "\n");
 
@@ -989,6 +996,7 @@ int main(int argc, const char * argv[]) {
 		}
 
 		fprintf(html_fp, "</body>\n</html>");
+		fclose(html_fp);
 	}
 
 	//Output graph
@@ -1095,30 +1103,31 @@ graph_t * load_graph(const char * pattern, int k, int nodes, int edges, unsigned
 	if(feof(fp)) {
 		fprintf(stdout, "[ERROR] unexpected EOF in %s\n", file_path);
 	}
+	char * endptr;
 	token = strtok(buf, sep); //read first arg - ignore
 	token = strtok(NULL, sep); //second arg
-	*reads_total = atoi(token);
+	*reads_total = strtoul(token, &endptr, 10);
 	fgets(buf, BUFFER, fp);
 	if(feof(fp)) {
 		fprintf(stdout, "[ERROR] unexpected EOF in %s\n", file_path);
 	}
 	token = strtok(buf, sep); //read first arg - ignore
 	token = strtok(NULL, sep); //second arg
-	*reads_total_input = atoi(token);
+	*reads_total_input = strtoul(token, &endptr, 10);
 	fgets(buf, BUFFER, fp);
 	if(feof(fp)) {
 		fprintf(stdout, "[ERROR] unexpected EOF in %s\n", file_path);
 	}
 	token = strtok(buf, sep); //read first arg - ignore
 	token = strtok(NULL, sep); //second arg
-	*kmer_total = atoi(token);
+	*kmer_total = strtoul(token, &endptr, 10);
 	fgets(buf, BUFFER, fp);
 	if(feof(fp)) {
 		fprintf(stdout, "[ERROR] unexpected EOF in %s\n", file_path);
 	}
 	token = strtok(buf, sep); //read first arg - ignore
 	token = strtok(NULL, sep); //second arg
-	*kmer_total_input = atoi(token);
+	*kmer_total_input = strtoul(token, &endptr, 10);
 
 
 	//Allocate graph
