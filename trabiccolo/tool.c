@@ -753,7 +753,7 @@ int main(int argc, const char * argv[]) {
 		fprintf(fp, "\tIP_count_2\tIP_freq_2\tInput_count_2\tInput_freq_2\tdiff_2\tdiff_log2_2\tentropy_2\tentropy_count_2");
 	}
 	if(num_of_subs >= 1) {
-		fprintf(fp, "\tsum_of_entropy\tsum_of_entropy_count");
+		fprintf(fp, "\tsum_of_freq\tsum_of_freq_input\tlog2_ratio_freq");
 	}
 	fprintf(fp, "\n");
 	for(i=0; i<expected_smer; i++) {
@@ -784,10 +784,10 @@ int main(int argc, const char * argv[]) {
 			sum_of_entropy_count = sum_of_entropy_count + entropy_count;
 			fprintf(fp, "\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\t%lf\t%lf", counts[i][g], freq, input_counts[i][g], freq_input, diff, diff_log2, entropy, entropy_count);
 		}
-		if(num_of_subs >= 1) {
-			fprintf(fp, "\t%lf\t%lf", sum_of_entropy, sum_of_entropy_count);
-		}
 		measures[i] = log2( sum_freq / sum_freq_in ); // TODO here define the final measure
+		if(num_of_subs >= 1) {
+			fprintf(fp, "\t%lf\t%lf\t%lf", sum_freq, sum_freq_in, measures[i]);
+		}
 
 		fprintf(fp, "\n");
 
@@ -875,6 +875,7 @@ int main(int argc, const char * argv[]) {
 			//printf("\t%s\t%d\t%d\n", smers[sorted[selected]], selected, sorted[selected]);
 		} while(selected < expected_smer && get_bit(flagged, selected));
 		if (selected >= expected_smer) {
+			to_select = processed; // If less are computed then ajust output to this
 			break;
 		}
 		motifs[processed] = sorted[selected];
@@ -905,6 +906,7 @@ int main(int argc, const char * argv[]) {
 					minus[processed]++;
 				}
 				flagged = set_on_bit(flagged, i);
+				if(!flagged) { return 1; }
 				// Also here flag rev comp
 				reverse_kmer(smers[sorted[i]], rev_smer, s);
 				hash_val = hash(rev_smer, s);
