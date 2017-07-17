@@ -16,6 +16,7 @@
 #include "../utilities/list.h"
 #include "../utilities/sorting.h"
 #include "../utilities/bit_array.h"
+#include "../utilities/distance.h"
 
 #ifdef SILENT
 	#define printf(...)
