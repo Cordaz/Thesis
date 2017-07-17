@@ -840,6 +840,8 @@ int main(int argc, const char * argv[]) {
 	}
 
 	int limit = num_of_subs + 1; // TODO
+	int shift;
+	int max_shift = 1;
 
 	bit_array_t * flagged = init_bit_array(expected_smer);
 	// Check for adapters only if existing list
