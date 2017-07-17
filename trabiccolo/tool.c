@@ -16,6 +16,7 @@
 #include "../utilities/list.h"
 #include "../utilities/sorting.h"
 #include "../utilities/bit_array.h"
+#include "../utilities/distance.h"
 
 #ifdef SILENT
 	#define printf(...)
@@ -44,6 +45,7 @@ static const char* const usage[] = {
 const char BASES[4] = {'A','C','G','T'};
 
 int ** update_psm(int **, int, char *, int);
+int ** update_psm_shift(int **, int, char *, int, int);
 
 graph_t * load_graph(const char *, int, int, int, unsigned long *, unsigned long *, unsigned long *, unsigned long *);
 string_FIFO_t * extend_right(string_FIFO_t *, char *, int, int);
@@ -881,7 +883,7 @@ int main(int argc, const char * argv[]) {
 		motifs[processed] = sorted[selected];
 		positions[processed] = selected;
 		//printf("\t%d\n", motifs[processed]);
-		psm[processed] = update_psm(psm[processed], s, smers[sorted[selected]], counts[sorted[selected]][0]);
+		psm[processed] = update_psm_shift(psm[processed], s, smers[sorted[selected]], counts[sorted[selected]][0], 0);
 		plus[processed] = 1;
 		minus[processed] = 0;
 		flagged = set_on_bit(flagged, selected);
@@ -900,7 +902,7 @@ int main(int argc, const char * argv[]) {
 		for(i=selected+1; i<expected_smer; i++) {
 			if (dist(smers[sorted[selected]], smers[sorted[i]], s, limit) < limit) {
 				if (measures[sorted[i]] > 0) {
-					psm[processed] = update_psm(psm[processed], s, smers[sorted[i]], counts[sorted[i]][0]);
+					psm[processed] = update_psm_shift(psm[processed], s, smers[sorted[i]], counts[sorted[i]][0], shift);
 					plus[processed]++;
 				} else {
 					minus[processed]++;
@@ -1083,6 +1085,24 @@ int ** update_psm(int ** psm, int s, char * smer, int count) {
 	return psm;
 }
 
+
+int ** update_psm_shift(int ** psm, int s, char * smer, int count, int shift) {
+	int i;
+	//printf("%d\n", shift);
+
+	if(shift >= 0) {
+		for(i=0; i<s-shift; i++) {
+			psm[get_base_index(smer[i+shift])][i] += count;
+		}
+	} else {
+		shift = abs(shift);
+		for(i=shift; i<s; i++) {
+			psm[get_base_index(smer[i-shift])][i] += count;
+		}
+	}
+
+	return psm;
+}
 
 
 graph_t * load_graph(const char * pattern, int k, int nodes, int edges, unsigned long * reads_total, unsigned long * reads_total_input, unsigned long * kmer_total, unsigned long * kmer_total_input) {
