@@ -474,8 +474,6 @@ int main(int argc, const char * argv[]) {
 	double freq_input;
 	double diff;
 	double diff_log2;
-	double entropy;
-	double entropy_count;
 
 
 	//estimate number of s-mer
@@ -527,7 +525,7 @@ int main(int argc, const char * argv[]) {
 			return 1;
 		}
 		for(g=0; g<=num_of_subs; g++) {
-			counts[i][g] = 1;
+			counts[i][g] = 0;
 			input_counts[i][g] = 1;
 		}
 	}
@@ -625,7 +623,7 @@ int main(int argc, const char * argv[]) {
 					}
 
 					freq = (double)count/total;
-					freq_input = (double)input_count/total_input;
+					freq_input = (double)(input_count + 1)/total_input;
 					if(freq >= freq_input) {
 						counts[i][g] += count;
 						input_counts[i][g] += input_count;
@@ -669,7 +667,7 @@ int main(int argc, const char * argv[]) {
 							}
 
 							freq = (double)count/total;
-							freq_input = (double)input_count/total_input;
+							freq_input = (double)(input_count + 1)/total_input;
 							if(freq >= freq_input) {
 								counts[i][g] += count;
 								input_counts[i][g] += input_count;
@@ -710,10 +708,6 @@ int main(int argc, const char * argv[]) {
 
 	}
 
-	free(half0);
-	free(half1);
-	free(kmer);
-
 
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
@@ -741,17 +735,15 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
-	double sum_of_entropy;
-	double sum_of_entropy_count;
 	double sum_freq;
 	double sum_freq_in;
 
-	fprintf(fp, "k-mer\tIP_count_0\tIP_freq_0\tInput_count_0\tInput_freq_0\tdiff_0\tdiff_log2_0\tentropy_0\tentropy_count_0");
+	fprintf(fp, "k-mer\tIP_count_0\tIP_freq_0\tInput_count_0\tInput_freq_0\tdiff_0\tdiff_log2_0");
 	if(num_of_subs >= 1) {
-		fprintf(fp, "\tIP_count_1\tIP_freq_1\tInput_count_1\tInput_freq_1\tdiff_1\tdiff_log2_1\tentropy_1\tentropy_count_1");
+		fprintf(fp, "\tIP_count_1\tIP_freq_1\tInput_count_1\tInput_freq_1\tdiff_1\tdiff_log2_1");
 	}
 	if(num_of_subs >= 2) {
-		fprintf(fp, "\tIP_count_2\tIP_freq_2\tInput_count_2\tInput_freq_2\tdiff_2\tdiff_log2_2\tentropy_2\tentropy_count_2");
+		fprintf(fp, "\tIP_count_2\tIP_freq_2\tInput_count_2\tInput_freq_2\tdiff_2\tdiff_log2_2");
 	}
 	if(num_of_subs >= 1) {
 		fprintf(fp, "\tsum_of_freq\tsum_of_freq_input\tlog2_ratio_freq");
@@ -766,26 +758,28 @@ int main(int argc, const char * argv[]) {
 			}
 		}
 		*/
-		sum_of_entropy = 0.0;
-		sum_of_entropy_count = 0.0;
 		sum_freq = 0.0;
 		sum_freq_in = 0.0;
 		fprintf(fp, "%s", smer);
 		for(g=0; g <= num_of_subs; g++) {
-			freq = (double)counts[i][g]/(double)total;
-			freq_input = (double)input_counts[i][g]/(double)total_input;
-			//printf("%lu\t%lu\t%lf\t%lu\t%lu\t%lf\n", counts[i][g], total, freq, input_counts[i][g], total_input, freq_input);
+			if(counts[i][g] == 0) {
+				freq = (double)0;
+				diff_log2 = 0;
+			} else {
+				freq = (double)counts[i][g]/(double)total;
+				diff = freq / freq_input;
+				diff_log2 = log2(diff);
+			}
 			sum_freq += freq;
 			sum_freq_in += freq_input;
-			diff = freq/freq_input;
-			diff_log2 = log2(diff);
-			entropy = freq* diff_log2;
-			entropy_count = (double)counts[i][g] * diff_log2;
-			sum_of_entropy = sum_of_entropy + entropy;
-			sum_of_entropy_count = sum_of_entropy_count + entropy_count;
-			fprintf(fp, "\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf\t%lf\t%lf", counts[i][g], freq, input_counts[i][g], freq_input, diff, diff_log2, entropy, entropy_count);
+			freq_input = (double)input_counts[i][g]/(double)total_input;
+			fprintf(fp, "\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf", counts[i][g], freq, input_counts[i][g], freq_input, diff, diff_log2);
 		}
-		measures[i] = log2( sum_freq / sum_freq_in ); // TODO here define the final measure
+		if(sum_freq == 0) {
+			measures[i] = 0;
+		} else {
+			measures[i] = log2( sum_freq / sum_freq_in );
+		}
 		if(num_of_subs >= 1) {
 			fprintf(fp, "\t%lf\t%lf\t%lf", sum_freq, sum_freq_in, measures[i]);
 		}
@@ -947,6 +941,9 @@ int main(int argc, const char * argv[]) {
 		char html_file[BUFFER];
 		snprintf(html_file, BUFFER, "%s.motifs.html", out_pattern);
 
+		char kmer_file[BUFFER];
+		FILE * kmer_fp;
+
 		FILE * html_fp;
 		if( !(html_fp = fopen(html_file, "w+")) ) {
 			fprintf(stdout, "[ERROR] can't open %s\n", html_file);
@@ -960,6 +957,112 @@ int main(int argc, const char * argv[]) {
 		fprintf(stdout, "Generating output: position specific matrix\n");
 
 		for(i=0; i<to_select; i++) {
+			strncpy(kmer_file, dir, BUFFER);
+			sprintf(buf, "%d_%s.kmers", i+1, smers[motifs[i]]);
+			strcat(kmer_file, buf);
+			if( !(kmer_fp = fopen(kmer_file, "w+")) ) {
+				fprintf(stdout, "[ERROR] can't open %s\n", kmer_file);
+				return 1;
+			}
+			// Print list of discarded kmer
+
+
+			clear(subs_reserve);
+			put(subs_reserve, smers[motifs[i]]);
+			for(g=0; g <= num_of_subs; g++) {
+				clear(subs);
+				flag = get(subs_reserve, smer);
+				while( flag != -1 ) {
+					//printf("\t%s\n", smer);
+					clear(q);
+
+					if( !(q = extend_right(q, smer, k-s, k)) ) {
+						fprintf(stdout, "[ERROR] couldn't allocate\n");
+						return 1;
+					}
+					flag2 = get(q, kmer);
+					while( flag2 != -1 ) {
+						//printf("%s\t", kmer);
+						strncpy(half0, kmer, k/2);
+						strncpy(half1, kmer+k/2, k/2);
+						hash_half0 = hash(half0, k/2);
+						hash_half1 = hash(half1, k/2);
+						//printf("%s\t%s\t", half0, half1);
+						if(R_arg) {
+							count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+							input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+						} else {
+							count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_count;
+							input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_input_count;
+						}
+
+						freq = (double)count/total;
+						freq_input = (double)(input_count + 1)/total_input;
+						if(freq >= freq_input) {
+							fprintf(kmer_fp, "%s\n", kmer);
+						}
+						flag2 = get(q, kmer);
+					}
+
+					//REVERSE
+					if(!S) {
+						reverse_kmer(smer, rev_smer, s);
+						if(!is_palyndrome(smer, rev_smer)) {
+							clear(q);
+
+							if( !(q = extend_right(q, rev_smer, k-s, k)) ) {
+								fprintf(stdout, "[ERROR] couldn't allocate\n");
+								return 1;
+							}
+							flag2 = get(q, kmer);
+							while( flag2 != -1 ) {
+								//printf("%s\t", kmer);
+								strncpy(half0, kmer, k/2);
+								strncpy(half1, kmer+k/2, k/2);
+								hash_half0 = hash(half0, k/2);
+								hash_half1 = hash(half1, k/2);
+								//printf("%s\t%s\t", half0, half1);
+								if(R_arg) {
+									count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
+									input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->input_count;
+								} else {
+									count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_count;
+									input_count = (unsigned long)dbg->nodes[hash_half0]->out_kstep[hash_half1]->kmer_input_count;
+								}
+
+								freq = (double)count/total;
+								freq_input = (double)(input_count + 1)/total_input;
+								if(freq >= freq_input) {
+									fprintf(kmer_fp, "%s\n", kmer);
+								}
+
+								flag2 = get(q, kmer);
+							}
+						}
+					}
+					//END REVERSE
+
+					if(g != num_of_subs) {
+						if( !(subs = substitute(subs, smer, s, 0, 1)) ) {
+							fprintf(stdout, "[ERROR] queue is not working\n");
+							return 1;
+						}
+					}
+
+					flag = get(subs_reserve, smer);
+				}
+
+				clear(subs_reserve);
+				flag = get(subs, smer);
+				while( flag != -1 ) {
+					put(subs_reserve, smer);
+					flag = get(subs, smer);
+				}
+			}
+
+
+
+
 			strncpy(out_file, dir, BUFFER);
 			sprintf(buf, "%d_%s.psm", i+1, smers[motifs[i]]);
 			strcat(out_file, buf);
