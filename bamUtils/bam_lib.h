@@ -5,8 +5,12 @@
 	#include <htslib/sam.h>
 	#include "genome.h"
 
-	#define REG_COMPLETE 0
-	#define CONTINUE 1
+	#ifndef CONTINUE
+		#define CONTINUE 1
+	#endif
+	#ifndef REG_COMPLETE
+		#define REG_COMPLETE 0
+	#endif
 	#ifndef SEQUENCE_BUFFER
 		#define SEQUENCE_BUFFER 1048576
 	#endif
@@ -85,7 +89,7 @@
 	/*
 	 * Requires genome initialized and region to be allocated
 	 * @param genome the genome struct initialized
-	 * @region region from which to extract the sequence
+	 * @param region from which to extract the sequence
 	 * @param sequence sequence struct to be used
 	 * @return updated sequence struct
 	 */

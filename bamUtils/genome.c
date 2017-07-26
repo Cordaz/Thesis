@@ -75,7 +75,7 @@ genome_t * genome_load_chromosome(genome_t * genome, char * chromosome_name, int
 	while(!feof(fp) || i<size) {
 		c = fgetc(fp);
 		if(c != '\n') {
-			if(islower(c)) c = toupper(c);
+			if(islower(c)) c = 'N';//c = toupper(c); // Remove repeated
 			genome->chromosome->seq[i] = c;
 			i++;
 		}
