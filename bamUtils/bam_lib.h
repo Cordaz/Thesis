@@ -64,14 +64,17 @@
 	region_t * get_next_region(myBam_t *, region_t *, int, int *);
 
 	/*
-	 * Get the region before (i.e. actually before if pos strand, otherwise the after) of the given region.
+	 * Get the region before (after) (i.e. actually before if pos strand, otherwise the after) of the given region.
 	 * @param region region struct of which to find the before
 	 * @param before_region the initialized region struct to build the to return region
 	 * @param chrom_info chromosome_info struct to guarantee that the region would be within the chromosome border
+	 * @param skip how many BPs skip from region to before region
 	 * @return before_region
 	 *
 	 */
-	region_t * get_before_region(region_t *, region_t *, chromosomes_info_t *);
+	region_t * get_before_region(region_t *, region_t *, chromosomes_info_t *, int);
+
+	region_t * get_after_region(region_t *, region_t *, chromosomes_info_t *, int);
 
 
 	/*

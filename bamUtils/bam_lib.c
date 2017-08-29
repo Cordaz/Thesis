@@ -81,15 +81,15 @@ region_t * get_next_region(myBam_t * myBam, region_t * region, int extension, in
 	return region;
 }
 
-region_t * get_before_region(region_t * region, region_t * before_region, chromosomes_info_t * chrom_info) {
+region_t * get_before_region(region_t * region, region_t * before_region, chromosomes_info_t * chrom_info, int skip) {
 	int region_size = region->end - region->start + 1;
 	if(region->strand == '+') {
-		before_region->start = region->start - region_size;
+		before_region->start = region->start - region_size - skip;
 		if(before_region->start < 0) before_region->start = 0;
-		before_region->end = region->start;
+		before_region->end = region->start - skip;
 	} else {
-		before_region->start = region->end;
-		before_region->end = region->end + region_size;
+		before_region->start = region->end + skip;
+		before_region->end = region->end + region_size + skip;
 		if(before_region->end > chrom_info->sizes[region->chrom_index]) before_region->end = chrom_info->sizes[region->chrom_index];
 	}
 
@@ -97,6 +97,24 @@ region_t * get_before_region(region_t * region, region_t * before_region, chromo
 	before_region->chrom_index = region->chrom_index;
 
 	return before_region;
+}
+
+region_t * get_after_region(region_t * region, region_t * after_region, chromosomes_info_t * chrom_info, int skip) {
+	int region_size = region->end - region->start + 1;
+	if(region->strand == '+') {
+		after_region->start = region->end + skip;
+		if(after_region->start < 0) after_region->start = 0;
+		after_region->end = after_region->start + region_size;
+	} else {
+		after_region->end = region->start - skip;
+		after_region->start = after_region->start - region_size;
+		if(after_region->end > chrom_info->sizes[region->chrom_index]) after_region->end = chrom_info->sizes[region->chrom_index];
+	}
+
+	strcpy(after_region->chromosome, region->chromosome);
+	after_region->chrom_index = region->chrom_index;
+
+	return after_region;
 }
 
 region_t * get_next_region_overlap(myBam_t * myBam, region_t * region, int extension, int * status) {

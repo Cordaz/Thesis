@@ -23,6 +23,8 @@ int main(int argc, const char * argv[]) {
 	int l_arg = 0;
 	int region_arg = 0;
 	int B_arg = 0;
+	int F_arg = 0;
+	int skip = 0;
 
 	struct argparse_option options[] = {
 		OPT_HELP(),
@@ -36,6 +38,8 @@ int main(int argc, const char * argv[]) {
 		OPT_INTEGER('l', "length", &l_arg, "length of the extension to be considered (default no extension)"),
 		OPT_BOOLEAN('r', "region", &region_arg, "consider overlapping region as unique region (i.e. multiple reads are considered as one region if partially overlapping)"),
 		OPT_BOOLEAN('B', "background", &B_arg, "build also the background file using region before the selected ones. SHOULD BE USED WITH '-f', CAN'T BE USED WITH '-r'"),
+		OPT_BOOLEAN('F', "foreground", &F_arg, "add the foreground regions. SHOULD BE USED WITH '-B'"),
+		OPT_INTEGER('s', "skip", &skip, "how many BPs skip between region and background/foreground. SHOULD BE USED WITH '-B'"),
 		OPT_END()
 	};
 
@@ -71,6 +75,18 @@ int main(int argc, const char * argv[]) {
 
 	if(B_arg && !fa_arg) {
 		fprintf(stdout, "[ERROR] '-B' argument should be used with '-f'\n\n");
+		argparse_usage(&argparse);
+		return 0;
+	}
+
+	if(F_arg && !B_arg) {
+		fprintf(stdout, "[ERROR] '-F' argument should be used with '-B'\n\n");
+		argparse_usage(&argparse);
+		return 0;
+	}
+
+	if(skip != 0 && !B_arg) {
+		fprintf(stdout, "[ERROR] '-s' argument should be used with '-B'\n\n");
 		argparse_usage(&argparse);
 		return 0;
 	}
@@ -112,6 +128,12 @@ int main(int argc, const char * argv[]) {
 	}
 	region_t * before_region;
 	if( !(before_region = (region_t*)malloc(sizeof(region_t))) ) {
+		fprintf(stdout, "[ERROR] can't allocate\n");
+		return -1;
+	}
+
+	region_t * after_region;
+	if( !(after_region = (region_t*)malloc(sizeof(region_t))) ) {
 		fprintf(stdout, "[ERROR] can't allocate\n");
 		return -1;
 	}
@@ -195,11 +217,18 @@ int main(int argc, const char * argv[]) {
 					fprintf(fa_fp, ">%s:%d\n%s\n", region->chromosome, region->start, sequence->seq);
 				}
 				if(B_arg) {
-					before_region = get_before_region(region, before_region, chrom_info);
+					before_region = get_before_region(region, before_region, chrom_info, skip);
 					if(!(sequence = get_sequence(genome, before_region, sequence))) {
 						return 1;
 					}
 					fprintf(bg_fa_fp, ">%s:%d\n%s\n", before_region->chromosome, before_region->start, sequence->seq);
+				}
+				if(F_arg) {
+					after_region = get_after_region(region, after_region, chrom_info, skip);
+					if(!(sequence = get_sequence(genome, after_region, sequence))) {
+						return 1;
+					}
+					fprintf(bg_fa_fp, ">%s:%d\n%s\n", after_region->chromosome, after_region->start, sequence->seq);
 				}
 				if(bed_arg) fprintf(bed_fp, "%s\t%d\t%d\t%c\n", region->chromosome, region->start, region->end-1, region->strand);
 			}
