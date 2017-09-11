@@ -82,7 +82,7 @@ region_t * get_next_region(myBam_t * myBam, region_t * region, int extension, in
 }
 
 region_t * get_before_region(region_t * region, region_t * before_region, chromosomes_info_t * chrom_info, int skip) {
-	int region_size = region->end - region->start + 1;
+	int region_size = region->end - region->start;
 	if(region->strand == '+') {
 		before_region->start = region->start - region_size - skip;
 		if(before_region->start < 0) before_region->start = 0;
@@ -100,14 +100,14 @@ region_t * get_before_region(region_t * region, region_t * before_region, chromo
 }
 
 region_t * get_after_region(region_t * region, region_t * after_region, chromosomes_info_t * chrom_info, int skip) {
-	int region_size = region->end - region->start + 1;
+	int region_size = region->end - region->start;
 	if(region->strand == '+') {
 		after_region->start = region->end + skip;
 		if(after_region->start < 0) after_region->start = 0;
 		after_region->end = after_region->start + region_size;
 	} else {
 		after_region->end = region->start - skip;
-		after_region->start = after_region->start - region_size;
+		after_region->start = region->start - region_size - skip;
 		if(after_region->end > chrom_info->sizes[region->chrom_index]) after_region->end = chrom_info->sizes[region->chrom_index];
 	}
 

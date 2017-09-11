@@ -118,8 +118,15 @@ int main(int argc, const char * argv[]) {
 	strncpy(bg_fa_file, bam_file, BUFFER);
 	extension = strrchr(bg_fa_file, '.');
 	strcpy(extension, support);
-	strcat(extension, "_background.fa");
-
+	strcat(extension, "_background");
+	if (F_arg) {
+		strcat(extension, "_foreground");
+	}
+	if (skip != 0) {
+		snprintf(support, BUFFER, "_skip%d", skip);
+		strcat(extension, support);
+	}
+	strcat(extension, ".fa");
 
 	region_t * region;
 	if( !(region = (region_t*)malloc(sizeof(region_t))) ) {
@@ -208,7 +215,8 @@ int main(int argc, const char * argv[]) {
 	} else {
 		region = get_next_region(myBam, region, l_arg, &status);
 		while( status != EOF ) {
-			//printf("%s:%d-%d\n", region->chromosome, region->start, region->end);
+			//printf("%s:%d-%d\t%c\n", region->chromosome, region->start, region->end, region->strand);
+			//printf("Reg len: %d\n", region->end - region->start);
 			if(status == REG_COMPLETE) {
 				if(fa_arg) {
 					if(!(sequence = get_sequence(genome, region, sequence))) {
@@ -218,6 +226,8 @@ int main(int argc, const char * argv[]) {
 				}
 				if(B_arg) {
 					before_region = get_before_region(region, before_region, chrom_info, skip);
+					//printf("%s:%d-%d\tBEFORE\n", before_region->chromosome, before_region->start, before_region->end);
+					//printf("Reg len (BEFORE): %d\n", before_region->end - before_region->start);
 					if(!(sequence = get_sequence(genome, before_region, sequence))) {
 						return 1;
 					}
@@ -225,6 +235,8 @@ int main(int argc, const char * argv[]) {
 				}
 				if(F_arg) {
 					after_region = get_after_region(region, after_region, chrom_info, skip);
+					//printf("%s:%d-%d\tAFTER\n", after_region->chromosome, after_region->start, after_region->end);
+					//printf("Reg len (AFTER): %d\n", after_region->end - after_region->start);
 					if(!(sequence = get_sequence(genome, after_region, sequence))) {
 						return 1;
 					}
