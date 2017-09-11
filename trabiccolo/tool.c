@@ -1073,6 +1073,20 @@ int main(int argc, const char * argv[]) {
 			fprintf(html_fp, "<h3>%s</h3>\n", smers[motifs[i]]);
 			fprintf(html_fp, "<p>Starting kmer index: %d</p>\n", positions[i]+1);
 			fprintf(html_fp, "<p>Used: %d kmers<br/>Discarded: %d kmers</p>\n", plus[i], minus[i]);
+			fprintf(html_fp, "<table>");
+			for(g=1; g<=num_of_subs; g++) {
+				fprintf(html_fp, "<tr><td>IP_count_%d</td><td>IP_freq_%d</td><td>Input_count_%d</td><td>Input_freq_%d</td></tr>", g, g, g, g);
+				if(counts[motifs[i]][g] == 0) {
+					freq = (double)0;
+				} else {
+					freq = (double)counts[motifs[i]][g]/(double)total;
+				}
+				freq_input = (double)input_counts[motifs[i]][g]/(double)total_input;
+
+				fprintf(html_fp, "<tr><td>%lu</td><td>%lf</td><td>%lu</td><td>%lf</td></tr>", counts[motifs[i]][g], freq, input_counts[motifs[i]][g], freq_input);
+			}
+			fprintf(html_fp, "<tr><td colspan='2'>log2_ratio_freq</td><td colspan='2'>%lf</td></tr>", measures[motifs[i]]);
+			fprintf(html_fp, "</table>");
 			fprintf(html_fp, "<table>\n");
 
 			for(h=0; h<4; h++) {
