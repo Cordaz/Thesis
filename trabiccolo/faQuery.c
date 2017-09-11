@@ -13,14 +13,18 @@ typedef struct hashable_region_s {
 	UT_hash_handle hh;
 } hashable_region_t;
 
-void uthash_add_hashable_region(hashable_region_t ** t, int start, int end, char strand, int score) {
+void uthash_add_hashable_region(hashable_region_t ** t, int reg_start, int reg_end, char reg_strand, int reg_score) {
     hashable_region_t * h;
 
     h = malloc(sizeof(hashable_region_t));
-    h->start = start;
-	 h->end = end;
-	 h->strand = strand;
-	 h->score = score;
+	 if(!h) {
+		 fprintf(stdout, "[ERROR] cannot allocate\n");
+		 exit(1);
+	 }
+    h->start = reg_start;
+	 h->end = reg_end;
+	 h->strand = reg_strand;
+	 h->score = reg_score;
     HASH_ADD_INT( *t, start, h );
 }
 
@@ -189,18 +193,21 @@ int main(int argc, const char * argv[]) {
 	for(i=3; buf[i+1] != ':'; i++) {
 		chr[i] = buf[i+1];
 	}
+	chr[i] = '\0';
 	strcpy(last_chr, chr);
-
+	int c = 0;
 	while(!feof(fa_fp)) {
 		// Identify chromosome
 		strcpy(chr, "chr");
 		for(i=3; buf[i+1] != ':'; i++) {
 			chr[i] = buf[i+1];
 		}
+		chr[i] = '\0';
 		if(strcmp(last_chr, chr) != 0) {
 			uthash_sort_by_start(&region_table);
 			uthash_print_hashable_regions(&region_table, bed_fp, last_chr);
 			uthash_delete_all(&region_table);
+			region_table = NULL;
 			strcpy(last_chr, chr);
 		}
 		token = NULL; // Used to just find seq_start only once per seq
@@ -216,12 +223,15 @@ int main(int argc, const char * argv[]) {
 				}
 				reg_start = seq_start + ( ptr - buf2 );
 				//printf("%d\t%d\n", seq_start, reg_start);
+				region = NULL;
 				if( !(region = uthash_find_hashable_region(&region_table, reg_start)) ) {
 					uthash_add_hashable_region(&region_table, reg_start, reg_start + s, '+', 1);
+					region = uthash_find_hashable_region(&region_table, reg_start);
 				} else {
 					region->score += 1;
 				}
-
+				printf("%d\t%s\t%d\t%d\t%s\t%d\n", c, chr, region->start, reg_start, kmers[i], region->score);
+				c++;
 				ptr = strstr(ptr+1, kmers[i]);
 			}
 		}
