@@ -231,7 +231,9 @@ int main(int argc, const char * argv[]) {
 					if(!(sequence = get_sequence(genome, before_region, sequence))) {
 						return 1;
 					}
-					fprintf(bg_fa_fp, ">%s:%d\n%s\n", before_region->chromosome, before_region->start, sequence->seq);
+					if(before_region->end - before_region->start > 0) {
+						fprintf(bg_fa_fp, ">%s:%d\n%s\n", before_region->chromosome, before_region->start, sequence->seq);
+					}
 				}
 				if(F_arg) {
 					after_region = get_after_region(region, after_region, chrom_info, skip);
@@ -240,7 +242,9 @@ int main(int argc, const char * argv[]) {
 					if(!(sequence = get_sequence(genome, after_region, sequence))) {
 						return 1;
 					}
-					fprintf(bg_fa_fp, ">%s:%d\n%s\n", after_region->chromosome, after_region->start, sequence->seq);
+					if(after_region->end - after_region->start > 0) {
+						fprintf(bg_fa_fp, ">%s:%d\n%s\n", after_region->chromosome, after_region->start, sequence->seq);
+					}
 				}
 				if(bed_arg) fprintf(bed_fp, "%s\t%d\t%d\t%c\n", region->chromosome, region->start, region->end-1, region->strand);
 			}

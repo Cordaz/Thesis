@@ -85,7 +85,7 @@ region_t * get_before_region(region_t * region, region_t * before_region, chromo
 	int region_size = region->end - region->start;
 	if(region->strand == '+') {
 		before_region->start = region->start - region_size - skip;
-		if(before_region->start < 0) before_region->start = 0;
+		if(before_region->start < 0) before_region->start = 1;
 		before_region->end = region->start - skip;
 	} else {
 		before_region->start = region->end + skip;
@@ -103,13 +103,13 @@ region_t * get_after_region(region_t * region, region_t * after_region, chromoso
 	int region_size = region->end - region->start;
 	if(region->strand == '+') {
 		after_region->start = region->end + skip;
-		if(after_region->start < 0) after_region->start = 0;
+		if(after_region->start < 0) after_region->start = 1;
 		after_region->end = after_region->start + region_size;
 	} else {
 		after_region->end = region->start - skip;
 		after_region->start = region->start - region_size - skip;
-		if(after_region->end > chrom_info->sizes[region->chrom_index]) after_region->end = chrom_info->sizes[region->chrom_index];
 	}
+	if(after_region->end > chrom_info->sizes[region->chrom_index]) after_region->end = chrom_info->sizes[region->chrom_index];
 
 	strcpy(after_region->chromosome, region->chromosome);
 	after_region->chrom_index = region->chrom_index;
