@@ -3,6 +3,7 @@
 import sys
 import numpy as np
 import re
+# sys.path.append("../utilities") # Not necessary anymore. Use for import custom libs
 
 def get_base_index(b):
     if b == 'A':
@@ -14,6 +15,23 @@ def get_base_index(b):
     if b == 'T':
         return 3
     return -1
+
+def complement_base(b):
+    if b == 'A':
+        return 'T'
+    if b == 'T':
+        return 'A'
+    if b == 'C':
+        return 'G'
+    if b == 'G':
+        return 'C'
+    return 'N'
+
+def complement(seq): # return complementary as list
+    c_seq = []
+    for b in reversed(list(seq)):
+        c_seq.append(complement_base(b))
+    return c_seq
 
 argv = sys.argv[1:]
 
@@ -59,22 +77,49 @@ with open(psm_file, 'r') as psm_fp:
 # print C
 
 # Normalize by column
+
+# np version
 col_sums = C.sum(axis=0) # axis 0 is column
 F = C / col_sums # frequencies matrix
+
+'''
+# extended version (equivalent to np, just for double check)
+F = np.zeros( (4,d), dtype=np.double ) # frequencies matrix
+for i in xrange(d):
+    col_sum = 0.0
+    for j in xrange(4):
+        col_sum += C[j,i]
+    for j in xrange(4):
+        F[j,i] = C[j,i] / col_sum
+'''
 
 # print F
 
 # Add 0.01 and renormalize
+
+# np version
 F = F + 0.01
 col_sums = F.sum(axis=0)
 PSM = F / col_sums
+
+'''
+# extended version (equivalent to np, just for double check)
+PSM = np.zeros( (4,d), dtype=np.double )
+for i in xrange(d):
+    col_sum = 0.0
+    for j in xrange(4):
+        F[j,i] += 0.01
+        col_sum += F[j,i]
+    for j in xrange(4):
+        PSM[j,i] = F[j,i] / col_sum
+'''
 
 # compute normalization factor
 p_max = 1.0
 p_min = 1.0
 for i in xrange(d):
-    max_of_col = 0
-    min_of_col = 1
+    max_of_col = -2.0 # ensure out of bound
+    min_of_col = 2.0
     for j in xrange(4):
         if PSM[j,i] > max_of_col:
             max_of_col = PSM[j,i]
@@ -86,16 +131,9 @@ for i in xrange(d):
 norm_denom = p_max - p_min
 
 # print PSM
-
-## Create specular matrix for complementary kmer
-c_PSM = np.zeros( (4, d), dtype=np.double )
-for i in xrange(d):
-    c_PSM[0,i] = PSM[3,d-i-1] # A row becomes T row right-left
-    c_PSM[3,i] = PSM[0,d-i-1] # viceversa
-    c_PSM[1,i] = PSM[2,d-i-1] # same as above for C/G
-    c_PSM[2,i] = PSM[1,d-i-1]
-
-# print c_PSM
+# print p_max
+# print p_min
+# print norm_denom
 
 ### PSM generated, can now compute on fa file
 
@@ -142,40 +180,40 @@ with open(fa_file, 'r') as fa_fp:
 
             # print "".join(seq) + "\n" + str(geco)
 
-            max_score = 0.0
+            max_score = p_min
             for i in xrange(len(seq) - d + 1):
                 score = 1.0
-                for j in xrange(d):
+                flag = True
+                for j in xrange(d): # sliding window size of matrix
                     bi = get_base_index(seq[i+j])
                     if bi < 0:
-                        score = 0.0
+                        flag = False
                         break
+                    pre_score = score
                     score *= PSM[bi,j]
-                if score > max_score:
+                    # print "Base: " + seq[i+j] + "\tPre_score= " + str(pre_score) + "\tPSM[" + str(bi) + "," + str(j) + "]=" + str(PSM[bi,j]) + "\tscore= " + str(score)
+                if flag and (score > max_score):
                     max_score = score
                     max_offset = i
 
-            c_max_score = 0.0
-            for i in xrange(len(seq) - d + 1):
+            # complementary
+            c_seq = complement(seq)
+            # print "".join(seq)
+            # print "".join(c_seq)
+
+            for i in xrange(len(c_seq) - d + 1): # c_seq is already reversed, slide positive
                 score = 1.0
-                for j in xrange(d):
-                    bi = get_base_index(seq[i+j])
+                flag = True
+                for j in xrange(d): # sliding window size of matrix
+                    bi = get_base_index(c_seq[i+j])
                     if bi < 0:
-                        score = 0.0
+                        flag = False
                         break
-                    score *= c_PSM[bi,j]
-                if score > c_max_score:
-                    c_max_score = score
-                    c_max_offset = i
+                    score *= PSM[bi,d-j-1] # consider matrix as reversed
+                if flag and (score > max_score):
+                    max_score = score
+                    max_offset = i + d - 1
 
-            if c_max_score > max_score: # doing this lost info about strand
-                max_score = c_max_score
-                max_offset = c_max_offset
-
-            if max_score > 0.0:
-                chrom, pos = geco
-                # print pos
-                # print max_offset
-                # print pos + max_offset
-                score = ( max_score - p_min ) / norm_denom # normalize score
-                sc_fp.write(chrom + "\t" + str(pos + max_offset) + "\t" + str(pos + max_offset + d) + "\t" + str(score) + "\t" + "".join(seq[max_offset : max_offset + d + 1]) + "\n")
+            chrom, pos = geco
+            score = ( max_score - p_min ) / norm_denom # normalize score
+            sc_fp.write(chrom + "\t" + str(pos + max_offset) + "\t" + str(pos + max_offset + d) + "\t" + str(score) + "\t" + "".join(seq[max_offset : max_offset + d]) + "\n")
