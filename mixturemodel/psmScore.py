@@ -11,6 +11,7 @@ Implementation of a JASPAR/region best score calculator, given a FASTA file.
 import sys
 import numpy as np
 import re
+import math
 # sys.path.append("../utilities") # Not necessary anymore. Use for import custom libs
 
 # return the index associated to each base/pairs
@@ -140,6 +141,8 @@ for i in xrange(d):
     p_max = p_max * max_of_col
     p_min = p_min * min_of_col
 
+p_max = math.log(p_max, 2)
+p_min = math.log(p_min, 2)
 norm_denom = p_max - p_min
 
 # print PSM
@@ -227,5 +230,5 @@ with open(fa_file, 'r') as fa_fp:
                     max_offset = i + d - 1
 
             chrom, pos = geco
-            score = ( max_score - p_min ) / norm_denom # normalize score
+            score = ( math.log(max_score,2) - p_min ) / norm_denom # normalize score
             sc_fp.write(chrom + "\t" + str(pos + max_offset) + "\t" + str(pos + max_offset + d) + "\t" + str(score) + "\t" + "".join(seq[max_offset : max_offset + d]) + "\n")

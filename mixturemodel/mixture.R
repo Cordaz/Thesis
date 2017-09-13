@@ -15,9 +15,7 @@ library(RColorBrewer)
 
 ### reading table
 t <- read.table(file, sep='\t', header=T)
-### THRESHOLD
-threshold = 0
-t <- t[t[score_col] >= threshold, ]
+xbotlimit <- min(t[score_col])
 
 ### performing mixture components identification using EM
 mu <- rep(0, m)
@@ -34,7 +32,7 @@ kd.x <- dens$x
 kd.y <- dens$y
 max.kd <- max(kd.y)
 t.stddev <- sd(t[, score_col])
-x <- seq(threshold,1,0.0001)
+x <- seq(xbotlimit,1,0.0001)
 
 ### plotting mixture components
 png(paste(file, "_mixture.png", collapse=NULL, sep=''), width=4*600, height=5*600, res=600, pointsize=10)
@@ -42,7 +40,7 @@ par(mfrow=c(2,1),mar=c(2,2,1,1))
 
 colors <- brewer.pal(m, "Set1")
 
-plot(kd.x, kd.y * t.stddev, col=colors[1], type="l", main="Original ditribution", xlab=NULL, ylab=NULL, xlim=c(threshold,1), ylim=c(0, max.kd))
+plot(kd.x, kd.y * t.stddev, col=colors[1], type="l", main="Original ditribution", xlab=NULL, ylab=NULL, xlim=c(xbotlimit,1), ylim=c(0, max.kd * t.stddev))
 
 # genrate values from gaussian and plot it
 y <- dnorm(x, mu[1], sigma[1]) * sigma[1]
@@ -56,7 +54,7 @@ for (j in 2:m) {
 	y <- cbind(y, y.tmp)
 }
 
-plot(x, y[,1], type='l', col=colors[1], xlim=c(threshold,1), ylim=c(0,max.y), main="Mixture component")
+plot(x, y[,1], type='l', col=colors[1], xlim=c(xbotlimit,1), ylim=c(0,max.y), main="Mixture component")
 for (j in 2:m) {
 	lines(x, y[,j], type='l', col=colors[j])
 }
