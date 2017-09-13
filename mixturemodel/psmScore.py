@@ -1,3 +1,11 @@
+'''
+@author Andrea Corneo
+@year 2017
+
+Script for calculating the best score in a fasta region file for each region based on a Jaspar matrix.
+
+'''
+
 #!/usr/bin/python
 
 import sys
