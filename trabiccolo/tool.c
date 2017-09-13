@@ -1,3 +1,11 @@
+/*
+@author Andrea Corneo
+@year 2017
+
+Main part of 'trabiccolo' project. Still not released.
+
+*/
+
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
