@@ -2,7 +2,7 @@
 @author Andrea Corneo
 @year 2017
 
-Script for calculating the best score in a fasta region file for each region based on a Jaspar matrix.
+Implementation of a JASPAR/region best score calculator, given a FASTA file.
 
 '''
 
@@ -13,6 +13,7 @@ import numpy as np
 import re
 # sys.path.append("../utilities") # Not necessary anymore. Use for import custom libs
 
+# return the index associated to each base/pairs
 def get_base_index(b):
     if b == 'A':
         return 0
@@ -24,6 +25,7 @@ def get_base_index(b):
         return 3
     return -1
 
+# complements a base, that is A <-> T, C <-> G
 def complement_base(b):
     if b == 'A':
         return 'T'
@@ -35,7 +37,9 @@ def complement_base(b):
         return 'C'
     return 'N'
 
-def complement(seq): # return complementary as list
+# complements a sequence
+# return complementary as list
+def complement(seq):
     c_seq = []
     for b in reversed(list(seq)):
         c_seq.append(complement_base(b))
