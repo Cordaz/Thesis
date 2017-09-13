@@ -1,3 +1,12 @@
+/*
+@author Andrea Corneo
+@year 2017
+
+Library for distance functions.
+The functions contained may depend on what we needed.
+
+*/
+
 #ifndef DISTANCE_H
 	#define DISTANCE_H
 

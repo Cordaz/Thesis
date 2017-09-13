@@ -1,3 +1,11 @@
+/*
+@author Andrea Corneo
+@year 2017
+
+Library implementing a string list.
+
+*/
+
 #ifndef LIST_H
 	#define LIST_H
 

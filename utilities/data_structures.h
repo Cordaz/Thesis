@@ -1,3 +1,17 @@
+/*
+@author Andrea Corneo
+@year 2017
+
+Library implementing the data structures necessary for building an "Adjances De Bruijn graph".
+We define an adjDBg as a standard De Bruijn graph with associated nodes at distance k/2 so that every node n_i is adjacent
+to every node n_(i +/- k/2).
+This library is focused on a small implementation of this type of graph and, in order to do so, is optimized with the support of arrays.
+To extend the graph to accept larger k (in this case is intended to work on k = 10, for which in our case the graph was saturated),
+if the saturation of the graph is very low it is convenient to not adopt this approach since is memory consuming.
+A future library using tree indexing may be developed.
+
+*/
+
 #ifndef DATA_STRUCTURES_H
 	#define DATA_STRUCTURES_H
 

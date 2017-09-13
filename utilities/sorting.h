@@ -1,3 +1,11 @@
+/*
+@author Andrea Corneo
+@year 2017
+
+General purpose sorting library for the project 'trabiccolo'.
+
+*/
+
 #ifndef SORTING_H
 	#define SORTING_H
 

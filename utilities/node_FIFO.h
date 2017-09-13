@@ -1,3 +1,11 @@
+/*
+@author Andrea Corneo
+@year 2017
+
+Implementation of a FIFO queue for node_t type (defined in data_structures.h)
+
+*/
+
 #ifndef FIFO_H
 	#define FIFO_H
 

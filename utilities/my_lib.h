@@ -1,3 +1,11 @@
+/*
+@author Andrea Corneo
+@year 2017
+
+General purpose library, with all the functions related to 'trabiccolo' and others software products in this project.
+
+*/
+
 #ifndef MYLIB_H
 	#define MYLIB_H
 

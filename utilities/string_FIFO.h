@@ -1,3 +1,13 @@
+/*
+@author Andrea Corneo
+@year 2017
+
+Implementation of a string FIFO queue.
+This implementation takes into account the allocation time and is intended to work with limited size in order to reuse
+the same memory allocated.
+
+*/
+
 #ifndef STRING_FIFO_H
 	#define STRING_FIFO_H
 

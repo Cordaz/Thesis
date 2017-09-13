@@ -1,3 +1,11 @@
+/*
+@author Andrea Corneo
+@year 2017
+
+Library implementing bit arrays coded as character arrays.
+
+*/
+
 #ifndef BIT_ARRAY_H
 	#define BIT_ARRAY_H
 
