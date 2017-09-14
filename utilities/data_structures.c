@@ -46,8 +46,8 @@ edge_t * create_edge(node_t * from, node_t * to, int hashed) {
 		new->id = hashed;
 		new->count = 0;
 		new->kmer_count = 0;
-		new->input_count = 0;
-		new->kmer_input_count = 0;
+		new->input_count = 1; // pseudo-count
+		new->kmer_input_count = 1; // pseudo-count
 		new->from = from;
 		new->to = to;
 	}

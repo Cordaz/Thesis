@@ -454,16 +454,6 @@ int main(int argc, const char * argv[]) {
 		fclose(fp);
 	}
 
-	/*
-	// Getting total kmer
-	for(i=0; i<nodes; i++) {
-		for(j=0; j<nodes; j++) {
-			kmer_total += (unsigned long)dbg->nodes[i]->out_kstep[j]->count;
-			kmer_total_input += (unsigned long)dbg->nodes[i]->out_kstep[j]->input_count;
-		}
-	}
-	*/
-
 	unsigned long total;
 	unsigned long total_input;
 
@@ -534,7 +524,7 @@ int main(int argc, const char * argv[]) {
 		}
 		for(g=0; g<=num_of_subs; g++) {
 			counts[i][g] = 0;
-			input_counts[i][g] = 1;
+			input_counts[i][g] = 0;
 		}
 	}
 
@@ -631,11 +621,13 @@ int main(int argc, const char * argv[]) {
 					}
 
 					freq = (double)count/total;
-					freq_input = (double)(input_count + 1)/total_input;
+					freq_input = (double)(input_count)/total_input;
 					if(freq >= freq_input) {
 						counts[i][g] += count;
 						input_counts[i][g] += input_count;
 						/*
+						// This part is used to create psm matrix for each entry.
+						// Substituted by a "greedy" matrix composition of top motifs
 						for(j=0; j<s; j++) {
 							if(R_arg) {
 								psm[i][get_base_index(smer[j])][j] += dbg->nodes[hash_half0]->out_kstep[hash_half1]->count;
@@ -675,7 +667,7 @@ int main(int argc, const char * argv[]) {
 							}
 
 							freq = (double)count/total;
-							freq_input = (double)(input_count + 1)/total_input;
+							freq_input = (double)(input_count)/total_input;
 							if(freq >= freq_input) {
 								counts[i][g] += count;
 								input_counts[i][g] += input_count;
@@ -770,24 +762,18 @@ int main(int argc, const char * argv[]) {
 		sum_freq_in = 0.0;
 		fprintf(fp, "%s", smer);
 		for(g=0; g <= num_of_subs; g++) {
-			if(counts[i][g] == 0) {
-				freq = (double)0;
-				diff_log2 = 0;
-			} else {
-				freq = (double)counts[i][g]/(double)total;
-				diff = freq / freq_input;
-				diff_log2 = log2(diff);
-			}
+			freq = (double)counts[i][g]/(double)total;
+			freq_input = (double)input_counts[i][g]/(double)total_input;
+			diff = freq / freq_input;
+			diff_log2 = log2( diff );
+
 			sum_freq += freq;
 			sum_freq_in += freq_input;
-			freq_input = (double)input_counts[i][g]/(double)total_input;
 			fprintf(fp, "\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf", counts[i][g], freq, input_counts[i][g], freq_input, diff, diff_log2);
 		}
-		if(sum_freq == 0) {
-			measures[i] = 0;
-		} else {
-			measures[i] = log2( sum_freq / sum_freq_in );
-		}
+
+		measures[i] = log2( sum_freq / sum_freq_in );
+
 		if(num_of_subs >= 1) {
 			fprintf(fp, "\t%lf\t%lf\t%lf", sum_freq, sum_freq_in, measures[i]);
 		}
@@ -797,7 +783,8 @@ int main(int argc, const char * argv[]) {
 	}
 	fclose(fp);
 
-	/////////////////////// NEW
+
+	/***************** GREEDY PSM GENERATION *****************************************************************************/
 
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
@@ -840,7 +827,7 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
-	int limit = num_of_subs + 1; // TODO
+	int limit = num_of_subs + 1;
 
 	bit_array_t * flagged = init_bit_array(expected_smer);
 	// Check for adapters only if existing list
@@ -902,7 +889,7 @@ int main(int argc, const char * argv[]) {
 
 		for(i=selected+1; i<expected_smer; i++) {
 			if (dist(smers[sorted[selected]], smers[sorted[i]], s, limit) < limit) {
-				if (measures[sorted[i]] > 0) {
+				if (measures[sorted[i]] > 0) { // FIXME measures o freq/freq_input con 0 sostituzioni?
 					psm[processed] = update_psm(psm[processed], s, smers[sorted[i]], counts[sorted[i]][0]);
 					plus[processed]++;
 				} else {
@@ -972,9 +959,9 @@ int main(int argc, const char * argv[]) {
 				fprintf(stdout, "[ERROR] can't open %s\n", kmer_file);
 				return 1;
 			}
-			// Print list of discarded kmer
 
 
+			// Print list of used kmer
 			clear(subs_reserve);
 			put(subs_reserve, smers[motifs[i]]);
 			for(g=0; g <= num_of_subs; g++) {
@@ -1005,7 +992,7 @@ int main(int argc, const char * argv[]) {
 						}
 
 						freq = (double)count/total;
-						freq_input = (double)(input_count + 1)/total_input;
+						freq_input = (double)(input_count)/total_input;
 						if(freq >= freq_input) {
 							fprintf(kmer_fp, "%s\n", kmer);
 						}
@@ -1039,7 +1026,7 @@ int main(int argc, const char * argv[]) {
 								}
 
 								freq = (double)count/total;
-								freq_input = (double)(input_count + 1)/total_input;
+								freq_input = (double)(input_count)/total_input;
 								if(freq >= freq_input) {
 									fprintf(kmer_fp, "%s\n", kmer);
 								}
@@ -1084,13 +1071,8 @@ int main(int argc, const char * argv[]) {
 			fprintf(html_fp, "<table>");
 			for(g=1; g<=num_of_subs; g++) {
 				fprintf(html_fp, "<tr><td>IP_count_%d</td><td>IP_freq_%d</td><td>Input_count_%d</td><td>Input_freq_%d</td></tr>", g, g, g, g);
-				if(counts[motifs[i]][g] == 0) {
-					freq = (double)0;
-				} else {
-					freq = (double)counts[motifs[i]][g]/(double)total;
-				}
+				freq = (double)counts[motifs[i]][g]/(double)total;
 				freq_input = (double)input_counts[motifs[i]][g]/(double)total_input;
-
 				fprintf(html_fp, "<tr><td>%lu</td><td>%lf</td><td>%lu</td><td>%lf</td></tr>", counts[motifs[i]][g], freq, input_counts[motifs[i]][g], freq_input);
 			}
 			fprintf(html_fp, "<tr><td colspan='2'>log2_ratio_freq</td><td colspan='2'>%lf</td></tr>", measures[motifs[i]]);
