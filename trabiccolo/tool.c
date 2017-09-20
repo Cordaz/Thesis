@@ -524,7 +524,7 @@ int main(int argc, const char * argv[]) {
 		}
 		for(g=0; g<=num_of_subs; g++) {
 			counts[i][g] = 0;
-			input_counts[i][g] = 0;
+			input_counts[i][g] = 1;
 		}
 	}
 
@@ -735,9 +735,6 @@ int main(int argc, const char * argv[]) {
 		return 1;
 	}
 
-	double sum_freq;
-	double sum_freq_in;
-
 	fprintf(fp, "k-mer\tIP_count_0\tIP_freq_0\tInput_count_0\tInput_freq_0\tdiff_0\tdiff_log2_0");
 	if(num_of_subs >= 1) {
 		fprintf(fp, "\tIP_count_1\tIP_freq_1\tInput_count_1\tInput_freq_1\tdiff_1\tdiff_log2_1");
@@ -758,24 +755,27 @@ int main(int argc, const char * argv[]) {
 			}
 		}
 		*/
-		sum_freq = 0.0;
-		sum_freq_in = 0.0;
 		fprintf(fp, "%s", smer);
-		for(g=0; g <= num_of_subs; g++) {
+		// Printing no sub
+		freq = (double)counts[i][0]/(double)total;
+		freq_input = (double)input_counts[i][0]/(double)total_input;
+		diff = freq / freq_input;
+		diff_log2 = log2( diff );
+		measures[i] = diff_log2;
+
+		fprintf(fp, "\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf", counts[i][g], freq, input_counts[i][g], freq_input, diff, diff_log2);
+		// Printing subs
+		for(g=1; g <= num_of_subs; g++) {
 			freq = (double)counts[i][g]/(double)total;
 			freq_input = (double)input_counts[i][g]/(double)total_input;
 			diff = freq / freq_input;
 			diff_log2 = log2( diff );
 
-			sum_freq += freq;
-			sum_freq_in += freq_input;
 			fprintf(fp, "\t%lu\t%lf\t%lu\t%lf\t%lf\t%lf", counts[i][g], freq, input_counts[i][g], freq_input, diff, diff_log2);
 		}
 
-		measures[i] = log2( sum_freq / sum_freq_in );
-
 		if(num_of_subs >= 1) {
-			fprintf(fp, "\t%lf\t%lf\t%lf", sum_freq, sum_freq_in, measures[i]);
+			fprintf(fp, "\t%lf", measures[i]);
 		}
 
 		fprintf(fp, "\n");
