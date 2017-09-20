@@ -40,7 +40,7 @@ par(mfrow=c(2,1),mar=c(2,2,1,1))
 
 colors <- brewer.pal(m, "Set1")
 
-plot(kd.x, kd.y * t.stddev, col=colors[1], type="l", main="Original ditribution", xlab=NULL, ylab=NULL, xlim=c(xbotlimit,1), ylim=c(0, max.kd * t.stddev))
+plot(kd.x, kd.y * t.stddev, col=colors[1], type="l", main="Original distribution", xlab=NULL, ylab=NULL, xlim=c(xbotlimit,1), ylim=c(0, max.kd * t.stddev))
 
 # genrate values from gaussian and plot it
 y <- dnorm(x, mu[1], sigma[1]) * sigma[1]
