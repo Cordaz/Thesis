@@ -44,6 +44,10 @@ with open(mat_list_file, "r") as mat_list_fp:
         mat_file = mat_dir + args[0] + ".pfm"
         match = re.search("\.(\d)", args[0])
         out_file = out_dir + args[2] + "." + match.group(1) + ".score"
+        if '(' in out_file:
+            out_file = out_file.replace('(', '_')
+        if ')' in out_file:
+            out_file = out_file.replace(')', '')
 
         p = sp.Popen("python psmScore.py " + mat_file + " " + fa_file + " " + out_file, shell=True)
         p.wait()

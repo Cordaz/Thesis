@@ -17,15 +17,6 @@ library(RColorBrewer)
 t <- read.table(file, sep='\t', header=T)
 xbotlimit <- min(t[score_col])
 
-### performing mixture components identification using EM
-mu <- rep(0, m)
-sigma <- rep(1, m)
-mix <- normalmixEM(t[,score_col], k=m)
-for (k in 1:m) {
-	mu[k] <- mix$mu[k]
-	sigma[k] <- mix$sigma[k]
-}
-
 ### calculating original distributions
 dens <- density(t[, score_col])
 kd.x <- dens$x
@@ -42,6 +33,15 @@ colors <- brewer.pal(m, "Set1")
 
 plot(kd.x, kd.y * t.stddev, col=colors[1], type="l", main="Original distribution", xlab=NULL, ylab=NULL, xlim=c(xbotlimit,1), ylim=c(0, max.kd * t.stddev))
 dev.off()
+
+### performing mixture components identification using EM
+mu <- rep(0, m)
+sigma <- rep(1, m)
+mix <- normalmixEM(t[,score_col], k=m)
+for (k in 1:m) {
+	mu[k] <- mix$mu[k]
+	sigma[k] <- mix$sigma[k]
+}
 
 # genrate values from gaussian and plot it
 png(paste(file, "_mixture.png", collapse=NULL, sep=''), width=4*600, height=2*600, res=600, pointsize=10)
