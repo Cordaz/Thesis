@@ -227,7 +227,7 @@ with open(fa_file, 'r') as fa_fp:
                     score *= PSM[bi,d-j-1] # consider matrix as reversed
                 if flag and (score > max_score):
                     max_score = score
-                    max_offset = i + d - 1
+                    max_offset = len(c_seq) - (i + d) - 1
 
             chrom, pos = geco
             score = ( math.log(max_score,2) - p_min ) / norm_denom # normalize score
