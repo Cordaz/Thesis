@@ -59,6 +59,30 @@ for (j in 2:m) {
 	lines(x, y[,j], type='l', col=colors[j])
 }
 
+# compute probability of higher gaussian (0 below mean of lower gaussian)
+lower_mean = min(mu)
+higher_mean = max(mu)
+for (i in 1:m) {
+	if(mu[i] == lower_mean) {
+		lower_mean_index = i
+	}
+	if(mu[i] == higher_mean) {
+		higher_mean_index = i
+	}
+}
+
+t$PROB <- rep(0,dim(t)[1])
+#t$PROB <- dnorm(t$SCORE, higher_mean, sigma[higher_mean_index]) * sigma[higher_mean_index] / ( sum(dnorm(t$SCORE, mu, sigma) * sigma) )
+for (i in 1:dim(t)[1]) {
+	# computing only all >= lower mean
+	if(t$SCORE[i] >= lower_mean) {
+		t$PROB[i] = dnorm(t$SCORE[i], higher_mean, sigma[higher_mean_index]) * sigma[higher_mean_index] / ( sum(dnorm(t$SCORE[i], mu, sigma) * sigma) )
+	}
+}
+
+# write table
+write.table(t, paste(file, ".probs", collapse=NULL, sep=''), sep='\t', append=FALSE, quote=FALSE, eol='\n', row.names=FALSE, col.names=names(t))
+
 #Corner_text <- function(text, location="topright"){
 #	legend(location,legend=text, bty ="n", pch=NA)
 #}
